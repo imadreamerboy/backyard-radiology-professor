@@ -1,6 +1,5 @@
-from radiology_trainer.ui import create_app
+from radiology_trainer.ui import APP_CSS, create_app
 
 
 if __name__ == "__main__":
-    create_app().launch()
-
+    create_app().launch(css=APP_CSS)

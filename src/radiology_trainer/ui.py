@@ -44,7 +44,7 @@ APP_CSS = """
 def create_app(config: AppConfig | None = None) -> gr.Blocks:
     cfg = config or AppConfig.from_env()
 
-    with gr.Blocks(css=APP_CSS, title="Backyard Radiology Trainer") as demo:
+    with gr.Blocks(title="Backyard Radiology Trainer") as demo:
         gr.Markdown(
             """
 # Backyard Radiology Trainer

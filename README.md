@@ -1,3 +1,11 @@
+---
+title: Backyard Radiology Trainer
+sdk: gradio
+sdk_version: 6.17.3
+app_file: app.py
+short_description: Chest-X-ray-first educational radiology practice app
+---
+
 # Backyard Radiology Trainer
 
 Chest-X-ray-first Gradio app for educational radiology practice. The user writes a blind read first, then the app reveals model evidence, a Nemotron-backed tutor response, and a short quiz.
@@ -78,4 +86,3 @@ The app currently ships a deterministic demo evidence model so UI and flow can b
 - The UI labels every output as educational.
 - Tutor prompts forbid diagnosis claims and force uncertainty notes.
 - The app asks for a blind read before revealing AI evidence.
-

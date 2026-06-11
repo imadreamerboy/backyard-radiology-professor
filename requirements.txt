@@ -1,0 +1,4 @@
+# Hugging Face Spaces installs from requirements.txt.
+# Local development should use uv and pyproject.toml.
+-e .
+
