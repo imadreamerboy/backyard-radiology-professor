@@ -19,6 +19,7 @@ This is not a clinical tool. It is designed for local educational use and a publ
 - Demo mode runs without gated models or GPU.
 - Local mode can call Hugging Face or OpenAI-compatible endpoints for Nemotron.
 - Local mode can optionally add MedGemma image-conditioned notes.
+- Local classifier services can plug in through one HTTP evidence endpoint.
 - Evidence layer is structured so X-Raydar, MedSigLIP, CXR Foundation, MedGemma, and SAM-style segmentation can be added behind stable interfaces.
 
 ## Run
@@ -67,6 +68,29 @@ $env:RAD_TRAINER_MODEL_MODE="local"
 $env:RAD_TRAINER_ENABLE_MEDICAL_VLM="true"
 $env:RAD_TRAINER_MEDICAL_VLM="google/medgemma-1.5-4b-it"
 uv run python app.py
+```
+
+External chest evidence endpoint:
+
+```powershell
+$env:RAD_TRAINER_MODEL_MODE="local"
+$env:RAD_TRAINER_CHEST_EVIDENCE_URL="http://localhost:9000/analyze"
+uv run python app.py
+```
+
+Expected endpoint response:
+
+```json
+{
+  "anatomy": "chest",
+  "findings": [
+    {"label": "pleural effusion", "score": 0.83, "source": "xraydar"}
+  ],
+  "regions": [
+    {"label": "pleural effusion", "x1": 0.08, "y1": 0.64, "x2": 0.41, "y2": 0.95}
+  ],
+  "model_notes": ["X-Raydar local service"]
+}
 ```
 
 ## Architecture

@@ -14,6 +14,8 @@ class AppConfig:
     openai_base_url: str | None = None
     openai_api_key: str | None = None
     chest_classifier: str = "demo"
+    chest_evidence_url: str | None = None
+    chest_evidence_timeout_seconds: float = 60.0
     medical_vlm: str = "google/medgemma-1.5-4b-it"
     enable_medical_vlm: bool = False
     enable_segmentation: bool = False
@@ -32,6 +34,10 @@ class AppConfig:
             openai_base_url=os.getenv("RAD_TRAINER_OPENAI_BASE_URL") or None,
             openai_api_key=os.getenv("RAD_TRAINER_OPENAI_API_KEY") or None,
             chest_classifier=os.getenv("RAD_TRAINER_CHEST_CLASSIFIER", "demo").strip().lower(),
+            chest_evidence_url=os.getenv("RAD_TRAINER_CHEST_EVIDENCE_URL") or None,
+            chest_evidence_timeout_seconds=float(
+                os.getenv("RAD_TRAINER_CHEST_EVIDENCE_TIMEOUT_SECONDS", "60")
+            ),
             medical_vlm=os.getenv(
                 "RAD_TRAINER_MEDICAL_VLM",
                 "google/medgemma-1.5-4b-it",

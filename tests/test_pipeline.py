@@ -40,3 +40,10 @@ def test_pipeline_uses_hybrid_evidence_when_medical_vlm_enabled() -> None:
     pipeline = build_pipeline(config)
 
     assert pipeline.evidence_model.name == "hybrid-chest-evidence"
+
+
+def test_pipeline_uses_http_evidence_when_url_is_configured() -> None:
+    config = AppConfig(chest_evidence_url="http://localhost:9000/analyze")
+    pipeline = build_pipeline(config)
+
+    assert pipeline.evidence_model.name == "http-chest-evidence"
