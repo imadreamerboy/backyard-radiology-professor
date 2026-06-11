@@ -1,0 +1,44 @@
+[project]
+name = "backyard-radiology-trainer"
+version = "0.1.0"
+description = "Chest-X-ray-first educational radiology trainer for the Hugging Face small models hackathon."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "gradio>=5.0",
+    "huggingface-hub>=0.24",
+    "numpy>=1.26",
+    "pillow>=10.0",
+    "pydantic>=2.7",
+    "requests>=2.32",
+]
+
+[project.optional-dependencies]
+models = [
+    "accelerate>=0.33",
+    "safetensors>=0.4",
+    "torch>=2.3",
+    "transformers>=4.44",
+]
+dicom = [
+    "pydicom>=2.4",
+]
+dev = [
+    "pytest>=8.2",
+    "ruff>=0.5",
+]
+
+[tool.uv]
+package = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
