@@ -18,7 +18,7 @@ models = [
     "accelerate>=0.33",
     "safetensors>=0.4",
     "torch>=2.3",
-    "transformers>=4.44",
+    "transformers>=4.50",
 ]
 dicom = [
     "pydicom>=2.4",
@@ -41,4 +41,3 @@ pythonpath = ["src"]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-
