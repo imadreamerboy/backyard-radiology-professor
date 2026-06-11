@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import gradio as gr
-from PIL import Image
 
 from radiology_trainer.config import AppConfig
 from radiology_trainer.domain import StudentRead
+from radiology_trainer.image_io import load_xray_image
 from radiology_trainer.overlays import draw_regions
 from radiology_trainer.pipeline import build_pipeline
 
@@ -55,13 +55,12 @@ Educational chest X-ray practice: blind read first, evidence second, tutor last.
 
         with gr.Row(equal_height=False):
             with gr.Column(scale=5):
-                image_input = gr.Image(
-                    label="X-ray",
-                    type="pil",
-                    height=560,
-                    image_mode="RGB",
+                file_input = gr.File(
+                    label="X-ray image or DICOM",
+                    file_types=["image", ".dcm", ".dicom"],
+                    type="filepath",
                 )
-                overlay_output = gr.Image(label="Evidence overlay", type="pil", height=560)
+                overlay_output = gr.Image(label="Preview and evidence overlay", type="pil", height=560)
 
             with gr.Column(scale=4):
                 blind_read = gr.Textbox(
@@ -100,7 +99,7 @@ Educational chest X-ray practice: blind read first, evidence second, tutor last.
 
         run_button.click(
             fn=_run_analysis,
-            inputs=[image_input, blind_read, question],
+            inputs=[file_input, blind_read, question],
             outputs=[
                 overlay_output,
                 evidence_table,
@@ -114,9 +113,14 @@ Educational chest X-ray practice: blind read first, evidence second, tutor last.
     return demo
 
 
-def _run_analysis(image: Image.Image | None, blind_read: str, question: str):
-    if image is None:
-        raise gr.Error("Upload an X-ray image first.")
+def _run_analysis(file_path: str | None, blind_read: str, question: str):
+    if not file_path:
+        raise gr.Error("Upload an X-ray image or DICOM first.")
+
+    try:
+        image = load_xray_image(file_path)
+    except Exception as exc:
+        raise gr.Error(str(exc)) from exc
 
     pipeline = build_pipeline(AppConfig.from_env())
     evidence, tutor = pipeline.analyze(
