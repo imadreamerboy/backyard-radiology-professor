@@ -38,6 +38,17 @@ APP_CSS = """
   background: #f8fafc;
   font-size: 13px;
 }
+.gradio-container button.primary,
+.gradio-container button.primary:hover,
+.gradio-container .primary > button {
+  background: var(--rt-accent) !important;
+  border-color: var(--rt-accent) !important;
+  color: #ffffff !important;
+}
+.gradio-container button.primary:hover,
+.gradio-container .primary > button:hover {
+  background: #2563eb !important;
+}
 """
 
 
