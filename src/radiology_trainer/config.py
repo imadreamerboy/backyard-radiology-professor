@@ -15,6 +15,7 @@ class AppConfig:
     openai_api_key: str | None = None
     chest_classifier: str = "demo"
     medical_vlm: str = "google/medgemma-1.5-4b-it"
+    enable_medical_vlm: bool = False
     enable_segmentation: bool = False
 
     @classmethod
@@ -35,6 +36,10 @@ class AppConfig:
                 "RAD_TRAINER_MEDICAL_VLM",
                 "google/medgemma-1.5-4b-it",
             ).strip(),
+            enable_medical_vlm=os.getenv("RAD_TRAINER_ENABLE_MEDICAL_VLM", "false")
+            .strip()
+            .lower()
+            in {"1", "true", "yes", "on"},
             enable_segmentation=os.getenv("RAD_TRAINER_ENABLE_SEGMENTATION", "false")
             .strip()
             .lower()

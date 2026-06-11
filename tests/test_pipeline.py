@@ -33,3 +33,10 @@ def test_load_xray_image_from_png(tmp_path) -> None:
 
     assert image.mode == "RGB"
     assert image.size == (640, 640)
+
+
+def test_pipeline_uses_hybrid_evidence_when_medical_vlm_enabled() -> None:
+    config = AppConfig(enable_medical_vlm=True)
+    pipeline = build_pipeline(config)
+
+    assert pipeline.evidence_model.name == "hybrid-chest-evidence"

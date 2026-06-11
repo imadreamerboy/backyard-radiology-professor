@@ -18,6 +18,7 @@ This is not a clinical tool. It is designed for local educational use and a publ
 - Extensible anatomy registry for later plain-film pipelines.
 - Demo mode runs without gated models or GPU.
 - Local mode can call Hugging Face or OpenAI-compatible endpoints for Nemotron.
+- Local mode can optionally add MedGemma image-conditioned notes.
 - Evidence layer is structured so X-Raydar, MedSigLIP, CXR Foundation, MedGemma, and SAM-style segmentation can be added behind stable interfaces.
 
 ## Run
@@ -55,6 +56,16 @@ Nemotron via a local OpenAI-compatible server:
 $env:RAD_TRAINER_TUTOR_PROVIDER="openai"
 $env:RAD_TRAINER_OPENAI_BASE_URL="http://localhost:8000/v1"
 $env:RAD_TRAINER_OPENAI_API_KEY="local"
+uv run python app.py
+```
+
+Optional MedGemma local VLM notes:
+
+```powershell
+uv sync --extra models
+$env:RAD_TRAINER_MODEL_MODE="local"
+$env:RAD_TRAINER_ENABLE_MEDICAL_VLM="true"
+$env:RAD_TRAINER_MEDICAL_VLM="google/medgemma-1.5-4b-it"
 uv run python app.py
 ```
 
