@@ -60,7 +60,11 @@ class NemotronTutorModel:
         return _parse_text_response(text, provider=f"{self.name}:{self.config.tutor_provider}")
 
     def _call_huggingface(self, prompt: str) -> str:
-        client = InferenceClient(model=self.config.nemotron_model, token=self.config.hf_token)
+        client = InferenceClient(
+            model=self.config.nemotron_model,
+            provider=self.config.hf_provider,
+            token=self.config.hf_token,
+        )
         response = client.chat.completions.create(
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
@@ -152,4 +156,3 @@ def _parse_text_response(text: str, provider: str) -> TutorResponse:
         quiz=quiz[:3],
         provider=provider,
     )
-

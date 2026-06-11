@@ -44,6 +44,7 @@ Nemotron via Hugging Face:
 ```powershell
 $env:HF_TOKEN="hf_..."
 $env:RAD_TRAINER_TUTOR_PROVIDER="hf"
+$env:RAD_TRAINER_HF_PROVIDER="nvidia"
 $env:RAD_TRAINER_NEMOTRON_MODEL="nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16"
 uv run python app.py
 ```

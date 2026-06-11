@@ -9,6 +9,7 @@ class AppConfig:
     model_mode: str = "demo"
     tutor_provider: str = "demo"
     nemotron_model: str = "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16"
+    hf_provider: str | None = "nvidia"
     hf_token: str | None = None
     openai_base_url: str | None = None
     openai_api_key: str | None = None
@@ -25,6 +26,7 @@ class AppConfig:
                 "RAD_TRAINER_NEMOTRON_MODEL",
                 "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16",
             ).strip(),
+            hf_provider=os.getenv("RAD_TRAINER_HF_PROVIDER", "nvidia").strip() or None,
             hf_token=os.getenv("HF_TOKEN") or None,
             openai_base_url=os.getenv("RAD_TRAINER_OPENAI_BASE_URL") or None,
             openai_api_key=os.getenv("RAD_TRAINER_OPENAI_API_KEY") or None,

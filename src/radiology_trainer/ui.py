@@ -78,6 +78,7 @@ Educational chest X-ray practice: blind read first, evidence second, tutor last.
                     f"""
 <span class="status-pill">mode: {cfg.model_mode}</span>
 <span class="status-pill">tutor: {cfg.tutor_provider}</span>
+<span class="status-pill">hf provider: {cfg.hf_provider or "auto"}</span>
 <span class="status-pill">nemotron: {cfg.nemotron_model}</span>
 """
                 )
