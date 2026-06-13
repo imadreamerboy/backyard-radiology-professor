@@ -9,6 +9,7 @@ from radiology_trainer.image_io import load_xray_image
 from radiology_trainer.learning import build_scorecard, format_scorecard
 from radiology_trainer.overlays import draw_regions
 from radiology_trainer.pipeline import build_pipeline
+from radiology_trainer.reporting import format_session_note
 
 
 APP_CSS = """
@@ -118,6 +119,9 @@ Educational chest X-ray practice: blind read first, evidence second, tutor last.
             tutor_summary = gr.Markdown(label="Tutor summary")
             tutor_quiz = gr.Markdown(label="Quiz")
 
+        with gr.Accordion("Copy-ready session note", open=False):
+            session_note = gr.Markdown()
+
         model_notes = gr.Markdown(label="Model notes")
 
         run_button.click(
@@ -130,6 +134,7 @@ Educational chest X-ray practice: blind read first, evidence second, tutor last.
                 scorecard_output,
                 tutor_summary,
                 tutor_quiz,
+                session_note,
                 model_notes,
             ],
         )
@@ -169,9 +174,15 @@ def _run_analysis(file_path: str | None, blind_read: str, question: str):
     scorecard_md = format_scorecard(scorecard)
     tutor_md = _format_tutor(tutor)
     quiz_md = "\n".join(f"{idx + 1}. {item}" for idx, item in enumerate(tutor.quiz))
+    session_note_md = format_session_note(
+        evidence=evidence,
+        scorecard=scorecard,
+        student_read=StudentRead(observation=blind_read or "", question=question or ""),
+        tutor=tutor,
+    )
     notes_md = "\n".join(f"- {note}" for note in evidence.model_notes)
 
-    return overlay, rows, quality, scorecard_md, tutor_md, quiz_md, notes_md
+    return overlay, rows, quality, scorecard_md, tutor_md, quiz_md, session_note_md, notes_md
 
 
 def _format_tutor(tutor) -> str:

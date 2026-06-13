@@ -8,6 +8,7 @@ from radiology_trainer.examples import example_cases
 from radiology_trainer.image_io import load_xray_image
 from radiology_trainer.learning import build_scorecard
 from radiology_trainer.pipeline import build_pipeline
+from radiology_trainer.reporting import format_session_note
 
 
 def test_demo_pipeline_returns_structured_evidence() -> None:
@@ -78,3 +79,16 @@ def test_example_cases_exist_and_load() -> None:
     for path, _, _ in example_cases():
         image = load_xray_image(path)
         assert image.size == (900, 900)
+
+
+def test_session_note_contains_training_artifact() -> None:
+    image = Image.new("L", (768, 768), color=120)
+    student_read = StudentRead(observation="PA chest. No pneumothorax.", question="What next?")
+    evidence, tutor = build_pipeline(AppConfig()).analyze(image=image, student_read=student_read)
+    scorecard = build_scorecard(evidence, student_read)
+
+    note = format_session_note(evidence, scorecard, student_read, tutor)
+
+    assert "Session note" in note
+    assert "Educational practice only" in note
+    assert "Top evidence signals" in note
