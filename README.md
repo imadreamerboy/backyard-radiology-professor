@@ -85,6 +85,31 @@ $env:RAD_TRAINER_CHEST_EVIDENCE_URL="http://localhost:9000/analyze"
 uv run python app.py
 ```
 
+Prepare and run the real X-Raydar backend:
+
+```powershell
+uv sync --extra xraydar --extra dev
+uv run python scripts/download_xraydar_backend.py
+uv run python scripts/run_xraydar_service.py
+```
+
+Validate the app pipeline against X-Raydar's included demo DICOM labels:
+
+```powershell
+$env:RAD_TRAINER_CHEST_EVIDENCE_URL="http://127.0.0.1:9000/analyze"
+uv run python scripts/validate_xraydar_demo.py
+```
+
+Smoke test the running Gradio app against the same backend:
+
+```powershell
+$env:RAD_TRAINER_MODEL_MODE="local"
+$env:RAD_TRAINER_CHEST_EVIDENCE_URL="http://127.0.0.1:9000/analyze"
+$env:RAD_TRAINER_CHEST_EVIDENCE_TIMEOUT_SECONDS="300"
+uv run python app.py
+uv run python scripts/smoke_gradio_xraydar.py --app-url http://127.0.0.1:7860
+```
+
 Expected endpoint response:
 
 ```json
@@ -136,3 +161,4 @@ The app currently ships a deterministic demo evidence model so UI and flow can b
 - [Submission pack](docs/submission_pack.md)
 - [Field notes draft](docs/field_notes.md)
 - [Space deploy runbook](docs/deploy_space.md)
+- [X-Raydar backend validation](docs/validation_xraydar_demo.md)

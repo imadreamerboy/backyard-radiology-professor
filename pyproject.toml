@@ -20,8 +20,19 @@ models = [
     "torch>=2.3",
     "transformers>=4.50",
 ]
+xraydar = [
+    "pydicom>=2.4",
+    "pylibjpeg>=2.0",
+    "pylibjpeg-libjpeg>=2.1",
+    "scikit-image>=0.24",
+    "scipy>=1.13",
+    "torch>=2.3",
+    "torchvision>=0.18",
+]
 dicom = [
     "pydicom>=2.4",
+    "pylibjpeg>=2.0",
+    "pylibjpeg-libjpeg>=2.1",
 ]
 dev = [
     "pytest>=8.2",

@@ -25,12 +25,20 @@ git push space feat/radiology-trainer-mvp:main
 
 ## Public Demo Defaults
 
-For a safe public Space, leave model env vars unset. The app will use:
+For a safe public Space, either leave model env vars unset or point to a separately hosted X-Raydar-compatible evidence endpoint. With env vars unset, the app will use:
 
 - synthetic demo cases
 - deterministic demo evidence
 - demo tutor text
 - no patient-image persistence
+
+For a real backend demo Space, set:
+
+- `RAD_TRAINER_MODEL_MODE=local`
+- `RAD_TRAINER_CHEST_EVIDENCE_URL=https://<your-evidence-service>/analyze`
+- `RAD_TRAINER_CHEST_EVIDENCE_TIMEOUT_SECONDS=180`
+
+Do not bundle X-Raydar weights into the public Space unless its non-commercial/research terms and Space hardware constraints are acceptable.
 
 ## Local Nemotron Demo
 
@@ -49,4 +57,3 @@ Then record the same flow:
 1. Pick `Right Lower Opacity`.
 2. Click `Analyze`.
 3. Show scorecard, tutor feedback, quiz, and session note.
-

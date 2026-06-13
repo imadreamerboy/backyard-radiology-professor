@@ -5,6 +5,7 @@ The app is built around stable internal contracts, not one monolithic model call
 ## Current MVP
 
 - `DemoChestEvidenceModel`: deterministic, demo-safe evidence for UI and flow testing.
+- `HTTPChestEvidenceModel`: production app path for a real local evidence service.
 - `NemotronTutorModel`: active tutor adapter for Hugging Face or OpenAI-compatible endpoints.
 - `EvidenceBundle`: shared contract for classifiers, localizers, retrieval tools, VLM notes, and segmentation outputs.
 
@@ -13,7 +14,7 @@ The app is built around stable internal contracts, not one monolithic model call
 1. **X-Raydar**
    - Role: frontal chest finding probabilities.
    - Model: `dnamodel/xraydar-cv`.
-   - Notes: non-commercial/research terms; requires the upstream `gmontana/xraydar-cv` code path and HF weights.
+   - Notes: non-commercial/research terms; use `scripts/download_xraydar_backend.py`, then run `scripts/run_xraydar_service.py` and point `RAD_TRAINER_CHEST_EVIDENCE_URL` at it.
 
 2. **MedSigLIP or CXR Foundation**
    - Role: anatomy routing, zero-shot labels, retrieval, out-of-distribution checks.
@@ -36,4 +37,3 @@ The app is built around stable internal contracts, not one monolithic model call
 ## Extension Pattern
 
 Add a new anatomy by implementing an evidence adapter that returns `EvidenceBundle`, then register it behind the anatomy router. The UI and tutor layer should not need anatomy-specific changes.
-
