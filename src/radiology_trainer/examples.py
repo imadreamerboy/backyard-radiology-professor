@@ -28,3 +28,7 @@ def example_cases() -> list[list[str]]:
             "What visual signs help exclude pneumothorax?",
         ],
     ]
+
+
+def example_case_label(path: str) -> str:
+    return Path(path).stem.replace("_", " ").title()

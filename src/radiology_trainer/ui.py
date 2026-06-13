@@ -4,7 +4,7 @@ import gradio as gr
 
 from radiology_trainer.config import AppConfig
 from radiology_trainer.domain import StudentRead
-from radiology_trainer.examples import example_cases
+from radiology_trainer.examples import example_case_label, example_cases
 from radiology_trainer.image_io import load_xray_image
 from radiology_trainer.learning import build_scorecard, format_scorecard
 from radiology_trainer.overlays import draw_regions
@@ -65,6 +65,7 @@ def create_theme() -> gr.Theme:
 
 def create_app(config: AppConfig | None = None) -> gr.Blocks:
     cfg = config or AppConfig.from_env()
+    cases = example_cases()
 
     with gr.Blocks(title="Backyard Radiology Trainer") as demo:
         gr.Markdown(
@@ -106,12 +107,14 @@ Educational chest X-ray practice: blind read first, evidence second, tutor last.
 <span class="status-pill">nemotron: {cfg.nemotron_model}</span>
 """
                 )
-                gr.Examples(
-                    examples=example_cases(),
-                    inputs=[file_input, blind_read, question],
-                    label="Synthetic demo cases",
-                    examples_per_page=4,
-                )
+                gr.Markdown("**Synthetic demo cases**")
+                with gr.Row():
+                    for idx, case in enumerate(cases):
+                        gr.Button(example_case_label(case[0]), size="sm").click(
+                            fn=lambda case_index=idx: _load_example_case(case_index),
+                            inputs=None,
+                            outputs=[file_input, blind_read, question],
+                        )
 
         with gr.Row():
             evidence_table = gr.Dataframe(
@@ -148,6 +151,11 @@ Educational chest X-ray practice: blind read first, evidence second, tutor last.
         )
 
     return demo
+
+
+def _load_example_case(case_index: int) -> tuple[str, str, str]:
+    file_path, blind_read, question = example_cases()[case_index]
+    return file_path, blind_read, question
 
 
 def _run_analysis(file_path: str | None, blind_read: str, question: str):
