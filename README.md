@@ -135,3 +135,4 @@ The app currently ships a deterministic demo evidence model so UI and flow can b
 - [Model integration plan](docs/model_integration.md)
 - [Submission pack](docs/submission_pack.md)
 - [Field notes draft](docs/field_notes.md)
+- [Space deploy runbook](docs/deploy_space.md)
