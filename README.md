@@ -129,3 +129,9 @@ The app currently ships a deterministic demo evidence model so UI and flow can b
 - The UI labels every output as educational.
 - Tutor prompts forbid diagnosis claims and force uncertainty notes.
 - The app asks for a blind read before revealing AI evidence.
+
+## Submission Materials
+
+- [Model integration plan](docs/model_integration.md)
+- [Submission pack](docs/submission_pack.md)
+- [Field notes draft](docs/field_notes.md)
