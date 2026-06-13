@@ -94,7 +94,8 @@ class NemotronTutorModel:
         response = requests.post(url, headers=headers, json=payload, timeout=90)
         response.raise_for_status()
         data = response.json()
-        return data["choices"][0]["message"]["content"]
+        message = data["choices"][0]["message"]
+        return message.get("content") or message.get("reasoning") or ""
 
 
 def _build_prompt(evidence: EvidenceBundle, student_read: StudentRead) -> str:

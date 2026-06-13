@@ -64,7 +64,15 @@ Nemotron via a local OpenAI-compatible server:
 $env:RAD_TRAINER_TUTOR_PROVIDER="openai"
 $env:RAD_TRAINER_OPENAI_BASE_URL="http://localhost:8000/v1"
 $env:RAD_TRAINER_OPENAI_API_KEY="local"
+$env:RAD_TRAINER_NEMOTRON_MODEL="nemotron3-nano-4B-FP8"
 uv run python app.py
+```
+
+Run quantized Nemotron locally with vLLM in WSL:
+
+```powershell
+uv run python scripts/run_vllm_nemotron_wsl.py --detach --enforce-eager
+uv run python scripts/smoke_vllm_tutor.py --model nemotron3-nano-4B-FP8
 ```
 
 Optional MedGemma local VLM notes:
@@ -108,6 +116,20 @@ $env:RAD_TRAINER_CHEST_EVIDENCE_URL="http://127.0.0.1:9000/analyze"
 $env:RAD_TRAINER_CHEST_EVIDENCE_TIMEOUT_SECONDS="300"
 uv run python app.py
 uv run python scripts/smoke_gradio_xraydar.py --app-url http://127.0.0.1:7860
+```
+
+Smoke test the full local stack with X-Raydar plus live vLLM tutor:
+
+```powershell
+$env:RAD_TRAINER_MODEL_MODE="local"
+$env:RAD_TRAINER_TUTOR_PROVIDER="openai"
+$env:RAD_TRAINER_OPENAI_BASE_URL="http://127.0.0.1:8000/v1"
+$env:RAD_TRAINER_OPENAI_API_KEY="local"
+$env:RAD_TRAINER_NEMOTRON_MODEL="nemotron3-nano-4B-FP8"
+$env:RAD_TRAINER_CHEST_EVIDENCE_URL="http://127.0.0.1:9000/analyze"
+$env:RAD_TRAINER_CHEST_EVIDENCE_TIMEOUT_SECONDS="300"
+uv run python app.py
+uv run python scripts/smoke_gradio_xraydar.py --app-url http://127.0.0.1:7860 --require-live-tutor
 ```
 
 Expected endpoint response:
@@ -162,3 +184,4 @@ The app currently ships a deterministic demo evidence model so UI and flow can b
 - [Field notes draft](docs/field_notes.md)
 - [Space deploy runbook](docs/deploy_space.md)
 - [X-Raydar backend validation](docs/validation_xraydar_demo.md)
+- [vLLM local verification](docs/vllm_local_verification.md)

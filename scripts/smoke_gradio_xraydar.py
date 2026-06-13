@@ -23,12 +23,19 @@ def main() -> None:
     top_labels = [normalize_xraydar_label(row[0]) for row in rows[: args.top_k]]
     top_source = str(rows[0][2]) if rows else ""
     top_score = float(rows[0][1]) if rows else 0.0
+    tutor_summary = str(result[4])
     model_notes = str(result[7])
+    live_tutor_ok = not args.require_live_tutor or (
+        args.expected_tutor_provider in tutor_summary
+        and "fallback" not in tutor_summary.lower()
+        and "demo-nemotron-tutor" not in tutor_summary.lower()
+    )
     passed = (
         expected_label in top_labels
         and top_source == "xraydar-cv"
         and top_score >= args.min_top_score
         and "X-Raydar CV backend" in model_notes
+        and live_tutor_ok
     )
     summary = {
         "app_url": args.app_url,
@@ -37,6 +44,10 @@ def main() -> None:
         "top_k": args.top_k,
         "min_top_score": args.min_top_score,
         "top_findings": rows[: args.top_k],
+        "require_live_tutor": args.require_live_tutor,
+        "expected_tutor_provider": args.expected_tutor_provider,
+        "live_tutor_ok": live_tutor_ok,
+        "tutor_summary_excerpt": tutor_summary[:1000],
         "model_notes": model_notes,
         "passed": passed,
     }
@@ -54,6 +65,8 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--expected-label", default="scoliosis")
     parser.add_argument("--top-k", type=int, default=7)
     parser.add_argument("--min-top-score", type=float, default=0.9)
+    parser.add_argument("--require-live-tutor", action="store_true")
+    parser.add_argument("--expected-tutor-provider", default="nemotron-tutor:openai")
     parser.add_argument("--output", type=Path, default=Path("outputs/gradio_xraydar_smoke.json"))
     return parser.parse_args()
 

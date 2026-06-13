@@ -42,13 +42,16 @@ Do not bundle X-Raydar weights into the public Space unless its non-commercial/r
 
 ## Local Nemotron Demo
 
-For a stronger recording, run locally with Nemotron:
+For a stronger recording, run locally with quantized Nemotron through vLLM:
 
 ```powershell
+uv run python scripts/run_vllm_nemotron_wsl.py --detach --enforce-eager
+uv run python scripts/smoke_vllm_tutor.py --model nemotron3-nano-4B-FP8
+
 $env:RAD_TRAINER_TUTOR_PROVIDER="openai"
 $env:RAD_TRAINER_OPENAI_BASE_URL="http://localhost:8000/v1"
 $env:RAD_TRAINER_OPENAI_API_KEY="local"
-$env:RAD_TRAINER_NEMOTRON_MODEL="nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16"
+$env:RAD_TRAINER_NEMOTRON_MODEL="nemotron3-nano-4B-FP8"
 uv run python app.py
 ```
 

@@ -6,7 +6,7 @@ The app is built around stable internal contracts, not one monolithic model call
 
 - `DemoChestEvidenceModel`: deterministic, demo-safe evidence for UI and flow testing.
 - `HTTPChestEvidenceModel`: production app path for a real local evidence service.
-- `NemotronTutorModel`: active tutor adapter for Hugging Face or OpenAI-compatible endpoints.
+- `NemotronTutorModel`: active tutor adapter for Hugging Face or OpenAI-compatible endpoints such as vLLM.
 - `EvidenceBundle`: shared contract for classifiers, localizers, retrieval tools, VLM notes, and segmentation outputs.
 
 ## Intended Local Stack
@@ -28,6 +28,7 @@ The app is built around stable internal contracts, not one monolithic model call
 4. **Nemotron 3 Nano**
    - Role: main tutor/orchestrator, blind-read critique, uncertainty handling, quiz generation.
    - Default model: `nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16`.
+   - Local verification model: `nvidia/NVIDIA-Nemotron-3-Nano-4B-FP8` served by vLLM as `nemotron3-nano-4B-FP8`.
    - Notes: run via vLLM/SGLang/OpenAI-compatible endpoint for local compute, or HF provider if available.
 
 5. **SAM 3.1**
