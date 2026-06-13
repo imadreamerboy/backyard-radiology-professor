@@ -55,6 +55,14 @@ APP_CSS = """
 """
 
 
+def create_theme() -> gr.Theme:
+    return gr.themes.Soft(
+        primary_hue="blue",
+        neutral_hue="slate",
+        radius_size="sm",
+    )
+
+
 def create_app(config: AppConfig | None = None) -> gr.Blocks:
     cfg = config or AppConfig.from_env()
 
