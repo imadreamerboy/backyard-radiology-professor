@@ -5,6 +5,7 @@ import gradio as gr
 from radiology_trainer.config import AppConfig
 from radiology_trainer.domain import StudentRead
 from radiology_trainer.image_io import load_xray_image
+from radiology_trainer.learning import build_scorecard, format_scorecard
 from radiology_trainer.overlays import draw_regions
 from radiology_trainer.pipeline import build_pipeline
 
@@ -106,6 +107,7 @@ Educational chest X-ray practice: blind read first, evidence second, tutor last.
             quality_output = gr.JSON(label="Image quality and routing")
 
         with gr.Row():
+            scorecard_output = gr.Markdown(label="Blind-read scorecard")
             tutor_summary = gr.Markdown(label="Tutor summary")
             tutor_quiz = gr.Markdown(label="Quiz")
 
@@ -118,6 +120,7 @@ Educational chest X-ray practice: blind read first, evidence second, tutor last.
                 overlay_output,
                 evidence_table,
                 quality_output,
+                scorecard_output,
                 tutor_summary,
                 tutor_quiz,
                 model_notes,
@@ -141,6 +144,10 @@ def _run_analysis(file_path: str | None, blind_read: str, question: str):
         image=image,
         student_read=StudentRead(observation=blind_read or "", question=question or ""),
     )
+    scorecard = build_scorecard(
+        evidence=evidence,
+        student_read=StudentRead(observation=blind_read or "", question=question or ""),
+    )
 
     overlay = draw_regions(image, evidence.regions) if evidence.regions else image
     rows = [
@@ -152,11 +159,12 @@ def _run_analysis(file_path: str | None, blind_read: str, question: str):
         "quality": evidence.quality.model_dump(),
         "agreement_notes": evidence.agreement_notes,
     }
+    scorecard_md = format_scorecard(scorecard)
     tutor_md = _format_tutor(tutor)
     quiz_md = "\n".join(f"{idx + 1}. {item}" for idx, item in enumerate(tutor.quiz))
     notes_md = "\n".join(f"- {note}" for note in evidence.model_notes)
 
-    return overlay, rows, quality, tutor_md, quiz_md, notes_md
+    return overlay, rows, quality, scorecard_md, tutor_md, quiz_md, notes_md
 
 
 def _format_tutor(tutor) -> str:

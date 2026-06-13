@@ -63,5 +63,16 @@ class TutorResponse(BaseModel):
     provider: str
 
 
-OverlayMode = Literal["none", "regions"]
+class ReadScorecard(BaseModel):
+    total_score: int = Field(ge=0, le=100)
+    coverage_score: int = Field(ge=0, le=100)
+    technique_score: int = Field(ge=0, le=100)
+    uncertainty_score: int = Field(ge=0, le=100)
+    matched_findings: list[str] = Field(default_factory=list)
+    missed_findings: list[str] = Field(default_factory=list)
+    technique_hits: list[str] = Field(default_factory=list)
+    next_steps: list[str] = Field(default_factory=list)
+    practice_focus: str
 
+
+OverlayMode = Literal["none", "regions"]

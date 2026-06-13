@@ -5,6 +5,7 @@ from PIL import Image
 from radiology_trainer.config import AppConfig
 from radiology_trainer.domain import Anatomy, StudentRead
 from radiology_trainer.image_io import load_xray_image
+from radiology_trainer.learning import build_scorecard
 from radiology_trainer.pipeline import build_pipeline
 
 
@@ -47,3 +48,26 @@ def test_pipeline_uses_http_evidence_when_url_is_configured() -> None:
     pipeline = build_pipeline(config)
 
     assert pipeline.evidence_model.name == "http-chest-evidence"
+
+
+def test_scorecard_rewards_structured_blind_read() -> None:
+    image = Image.new("L", (768, 768), color=120)
+    pipeline = build_pipeline(AppConfig())
+    initial_evidence, _ = pipeline.analyze(
+        image=image,
+        student_read=StudentRead(observation=""),
+    )
+    top_label = initial_evidence.top_findings(1)[0].label
+    student_read = StudentRead(
+        observation=(
+            f"PA chest radiograph. Image quality adequate. Possible {top_label}. "
+            "No pneumothorax."
+        )
+    )
+    evidence, _ = pipeline.analyze(image=image, student_read=student_read)
+
+    scorecard = build_scorecard(evidence, student_read)
+
+    assert scorecard.total_score > 50
+    assert "projection/view" in scorecard.technique_hits
+    assert scorecard.next_steps
