@@ -21,6 +21,7 @@ This is not a clinical tool. It is designed for local educational use and a publ
 - Local mode can optionally add MedGemma image-conditioned notes.
 - Local classifier services can plug in through one HTTP evidence endpoint.
 - Evidence layer is structured so X-Raydar, MedSigLIP, CXR Foundation, MedGemma, and SAM-style segmentation can be added behind stable interfaces.
+- Synthetic example cases are included for public demo judging without patient data.
 
 ## Run
 
@@ -30,6 +31,12 @@ uv run python app.py
 ```
 
 Open the local URL Gradio prints.
+
+Regenerate synthetic demo cases:
+
+```powershell
+uv run python scripts/generate_demo_cases.py
+```
 
 ## Model Modes
 

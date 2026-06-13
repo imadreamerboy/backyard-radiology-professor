@@ -4,6 +4,7 @@ import gradio as gr
 
 from radiology_trainer.config import AppConfig
 from radiology_trainer.domain import StudentRead
+from radiology_trainer.examples import example_cases
 from radiology_trainer.image_io import load_xray_image
 from radiology_trainer.learning import build_scorecard, format_scorecard
 from radiology_trainer.overlays import draw_regions
@@ -95,6 +96,12 @@ Educational chest X-ray practice: blind read first, evidence second, tutor last.
 <span class="status-pill">medical vlm: {"on" if cfg.enable_medical_vlm else "off"}</span>
 <span class="status-pill">nemotron: {cfg.nemotron_model}</span>
 """
+                )
+                gr.Examples(
+                    examples=example_cases(),
+                    inputs=[file_input, blind_read, question],
+                    label="Synthetic demo cases",
+                    examples_per_page=4,
                 )
 
         with gr.Row():

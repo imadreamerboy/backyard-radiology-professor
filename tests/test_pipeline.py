@@ -4,6 +4,7 @@ from PIL import Image
 
 from radiology_trainer.config import AppConfig
 from radiology_trainer.domain import Anatomy, StudentRead
+from radiology_trainer.examples import example_cases
 from radiology_trainer.image_io import load_xray_image
 from radiology_trainer.learning import build_scorecard
 from radiology_trainer.pipeline import build_pipeline
@@ -71,3 +72,9 @@ def test_scorecard_rewards_structured_blind_read() -> None:
     assert scorecard.total_score > 50
     assert "projection/view" in scorecard.technique_hits
     assert scorecard.next_steps
+
+
+def test_example_cases_exist_and_load() -> None:
+    for path, _, _ in example_cases():
+        image = load_xray_image(path)
+        assert image.size == (900, 900)
