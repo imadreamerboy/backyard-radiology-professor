@@ -20,7 +20,7 @@ def draw_regions(image: Image.Image, regions: list[RegionBox]) -> Image.Image:
         color = (55, 132, 255, 190)
         fill = (55, 132, 255, 32)
         draw.rectangle((x1, y1, x2, y2), outline=color, width=3, fill=fill)
-        label = f"{region.label} {region.score:.2f}"
+        label = region.label if region.score is None else f"{region.label} {region.score:.2f}"
         text_bbox = draw.textbbox((x1, y1), label, font=font)
         pad = 4
         draw.rectangle(
@@ -35,4 +35,3 @@ def draw_regions(image: Image.Image, regions: list[RegionBox]) -> Image.Image:
         draw.text((x1, y1), label, fill=(255, 255, 255, 255), font=font)
 
     return rendered
-

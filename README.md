@@ -1,187 +1,66 @@
 ---
-title: Backyard Radiology Trainer
-sdk: gradio
-sdk_version: 6.17.3
-app_file: app.py
-short_description: Chest-X-ray-first educational radiology practice app
+title: Backyard Radiology Professor
+emoji: 🩻
+colorFrom: gray
+colorTo: teal
+sdk: docker
+app_port: 7860
 ---
 
-# Backyard Radiology Trainer
+# Backyard Radiology Professor
 
-Chest-X-ray-first Gradio app for educational radiology practice. The user writes a blind read first, then the app reveals model evidence, a Nemotron-backed tutor response, and a short quiz.
+An educational chest-radiograph workstation for deliberate practice. A trainee commits a blind interpretation before seeing independently attributed X-Raydar evidence, MedGemma localization, and feedback from a multimodal MedGemma professor.
 
-This is not a clinical tool. It is designed for local educational use and a public demo-safe Space.
+## Runtime
 
-## MVP Scope
+- `unsloth/medgemma-27b-it-GGUF` Q4_K_M + F16 projector: professor review and multi-turn chat.
+- `unsloth/medgemma-1.5-4b-it-GGUF` Q4_K_M + F16 projector: observations and bounding boxes.
+- X-Raydar: independent three-model chest radiograph classifier.
+- One pinned CUDA llama.cpp router with `--models-max 1`.
+- Python dependencies and commands are managed with `uv`.
 
-- Chest radiograph workflow first.
-- Extensible anatomy registry for later plain-film pipelines.
-- Demo mode runs without gated models or GPU.
-- Local mode can call Hugging Face or OpenAI-compatible endpoints for Nemotron.
-- Local mode can optionally add MedGemma image-conditioned notes.
-- Local classifier services can plug in through one HTTP evidence endpoint.
-- Evidence layer is structured so X-Raydar, MedSigLIP, CXR Foundation, MedGemma, and SAM-style segmentation can be added behind stable interfaces.
-- Synthetic example cases are included for public demo judging without patient data.
+Only one MedGemma model is resident at a time. X-Raydar moves back to CPU after inference, the 4B localizer unloads, and the 27B professor then loads for chat.
 
 ## Run
 
-```powershell
-uv sync
+```bash
+cp .env.example .env
+docker compose up --build
+```
+
+Set `HF_TOKEN` after accepting the MedGemma license. Open [http://localhost:7860](http://localhost:7860).
+
+On Windows, run the repository and model cache from the WSL ext4 filesystem
+rather than `/mnt/c`; see [docs/run_wsl.md](docs/run_wsl.md).
+
+For UI-only development:
+
+```bash
+uv sync --extra dicom --extra dev
 uv run python app.py
 ```
 
-Open the local URL Gradio prints.
+## Verify
 
-Regenerate synthetic demo cases:
-
-```powershell
-uv run python scripts/generate_demo_cases.py
+```bash
+uv run pytest
+uv run ruff check src tests scripts app.py
+uv run python scripts/generate_dicom_fixtures.py
+uv run python scripts/validate_golden_cases.py
+uv run python scripts/benchmark_runtime.py
 ```
 
-## Model Modes
+Verified local and deployed results are stored under `artifacts/validation/`.
+The public demo is complete only after the same real-backend suite passes against the deployed Space. L4 is the target; if the measured profile exceeds 22 GB, reduce professor context to 6K and partially offload layers. If warm performance remains below 5 tokens/s or first token exceeds 20 seconds, use L40S without changing model quality.
 
-Default mode:
+## Supported studies
 
-```powershell
-$env:RAD_TRAINER_MODEL_MODE="demo"
-$env:RAD_TRAINER_TUTOR_PROVIDER="demo"
-uv run python app.py
-```
+- PNG/JPEG and other common image formats.
+- Single CR/DX DICOM files.
+- Multi-file or multi-frame chest CR/DX studies.
+- ZIP archives with bounded, traversal-safe extraction.
+- Uncompressed, JPEG, JPEG-LS, and JPEG2000 pixel data through pydicom/pylibjpeg.
 
-Nemotron via Hugging Face:
+CT, MR, non-chest studies, corrupt archives, and oversized uploads are rejected.
 
-```powershell
-$env:HF_TOKEN="hf_..."
-$env:RAD_TRAINER_TUTOR_PROVIDER="hf"
-$env:RAD_TRAINER_HF_PROVIDER="nvidia"
-$env:RAD_TRAINER_NEMOTRON_MODEL="nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16"
-uv run python app.py
-```
-
-Nemotron via a local OpenAI-compatible server:
-
-```powershell
-$env:RAD_TRAINER_TUTOR_PROVIDER="openai"
-$env:RAD_TRAINER_OPENAI_BASE_URL="http://localhost:8000/v1"
-$env:RAD_TRAINER_OPENAI_API_KEY="local"
-$env:RAD_TRAINER_NEMOTRON_MODEL="nemotron3-nano-4B-FP8"
-uv run python app.py
-```
-
-Run quantized Nemotron locally with vLLM in WSL:
-
-```powershell
-uv run python scripts/run_vllm_nemotron_wsl.py --detach --enforce-eager
-uv run python scripts/smoke_vllm_tutor.py --model nemotron3-nano-4B-FP8
-```
-
-Optional MedGemma local VLM notes:
-
-```powershell
-uv sync --extra models
-$env:RAD_TRAINER_MODEL_MODE="local"
-$env:RAD_TRAINER_ENABLE_MEDICAL_VLM="true"
-$env:RAD_TRAINER_MEDICAL_VLM="google/medgemma-1.5-4b-it"
-uv run python app.py
-```
-
-External chest evidence endpoint:
-
-```powershell
-$env:RAD_TRAINER_MODEL_MODE="local"
-$env:RAD_TRAINER_CHEST_EVIDENCE_URL="http://localhost:9000/analyze"
-uv run python app.py
-```
-
-Prepare and run the real X-Raydar backend:
-
-```powershell
-uv sync --extra xraydar --extra dev
-uv run python scripts/download_xraydar_backend.py
-uv run python scripts/run_xraydar_service.py
-```
-
-Validate the app pipeline against X-Raydar's included demo DICOM labels:
-
-```powershell
-$env:RAD_TRAINER_CHEST_EVIDENCE_URL="http://127.0.0.1:9000/analyze"
-uv run python scripts/validate_xraydar_demo.py
-```
-
-Smoke test the running Gradio app against the same backend:
-
-```powershell
-$env:RAD_TRAINER_MODEL_MODE="local"
-$env:RAD_TRAINER_CHEST_EVIDENCE_URL="http://127.0.0.1:9000/analyze"
-$env:RAD_TRAINER_CHEST_EVIDENCE_TIMEOUT_SECONDS="300"
-uv run python app.py
-uv run python scripts/smoke_gradio_xraydar.py --app-url http://127.0.0.1:7860
-```
-
-Smoke test the full local stack with X-Raydar plus live vLLM tutor:
-
-```powershell
-$env:RAD_TRAINER_MODEL_MODE="local"
-$env:RAD_TRAINER_TUTOR_PROVIDER="openai"
-$env:RAD_TRAINER_OPENAI_BASE_URL="http://127.0.0.1:8000/v1"
-$env:RAD_TRAINER_OPENAI_API_KEY="local"
-$env:RAD_TRAINER_NEMOTRON_MODEL="nemotron3-nano-4B-FP8"
-$env:RAD_TRAINER_CHEST_EVIDENCE_URL="http://127.0.0.1:9000/analyze"
-$env:RAD_TRAINER_CHEST_EVIDENCE_TIMEOUT_SECONDS="300"
-uv run python app.py
-uv run python scripts/smoke_gradio_xraydar.py --app-url http://127.0.0.1:7860 --require-live-tutor
-```
-
-Expected endpoint response:
-
-```json
-{
-  "anatomy": "chest",
-  "findings": [
-    {"label": "pleural effusion", "score": 0.83, "source": "xraydar"}
-  ],
-  "regions": [
-    {"label": "pleural effusion", "x1": 0.08, "y1": 0.64, "x2": 0.41, "y2": 0.95}
-  ],
-  "model_notes": ["X-Raydar local service"]
-}
-```
-
-## Architecture
-
-```text
-Upload image
-  -> preprocessing and quality notes
-  -> anatomy router
-  -> chest evidence pipeline
-     -> classifier findings
-     -> localization boxes
-     -> optional segmentation overlays
-  -> Nemotron tutor layer
-  -> educational feedback and quiz
-```
-
-The app currently ships a deterministic demo evidence model so UI and flow can be tested anywhere. Real model adapters should produce the same `EvidenceBundle` shape.
-
-## Next Model Integrations
-
-1. X-Raydar for frontal chest finding probabilities.
-2. MedSigLIP or CXR Foundation for embeddings, retrieval, and broad routing.
-3. MedGemma 1.5 4B as a medical VLM for image-conditioned explanations.
-4. SAM 3.1 as an interactive region-refinement overlay, not as a diagnostic source.
-
-## Safety Defaults
-
-- No uploads are persisted by default.
-- The UI labels every output as educational.
-- Tutor prompts forbid diagnosis claims and force uncertainty notes.
-- The app asks for a blind read before revealing AI evidence.
-
-## Submission Materials
-
-- [Model integration plan](docs/model_integration.md)
-- [Submission pack](docs/submission_pack.md)
-- [Field notes draft](docs/field_notes.md)
-- [Space deploy runbook](docs/deploy_space.md)
-- [X-Raydar backend validation](docs/validation_xraydar_demo.md)
-- [vLLM local verification](docs/vllm_local_verification.md)
+This software is for educational practice, not clinical use.

@@ -5,34 +5,33 @@ description = "Chest-X-ray-first educational radiology trainer for the Hugging F
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "gradio>=5.0",
+    "fastapi>=0.115",
+    "gradio>=6,<7",
     "huggingface-hub>=0.24",
     "numpy>=1.26",
     "pillow>=10.0",
     "pydantic>=2.7",
+    "python-multipart>=0.0.20",
     "requests>=2.32",
+    "uvicorn>=0.34",
 ]
 
 [project.optional-dependencies]
-models = [
-    "accelerate>=0.33",
-    "safetensors>=0.4",
-    "torch>=2.3",
-    "transformers>=4.50",
-]
 xraydar = [
     "pydicom>=2.4",
     "pylibjpeg>=2.0",
     "pylibjpeg-libjpeg>=2.1",
+    "pylibjpeg-openjpeg>=2.4",
     "scikit-image>=0.24",
     "scipy>=1.13",
-    "torch>=2.3",
-    "torchvision>=0.18",
+    "torch==2.10.0",
+    "torchvision==0.25.0",
 ]
 dicom = [
     "pydicom>=2.4",
     "pylibjpeg>=2.0",
     "pylibjpeg-libjpeg>=2.1",
+    "pylibjpeg-openjpeg>=2.4",
 ]
 dev = [
     "pytest>=8.2",
@@ -41,6 +40,15 @@ dev = [
 
 [tool.uv]
 package = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu128" }
+torchvision = { index = "pytorch-cu128" }
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
 
 [tool.setuptools.packages.find]
 where = ["src"]

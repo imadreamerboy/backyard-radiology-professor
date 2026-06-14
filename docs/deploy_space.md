@@ -1,62 +1,36 @@
-# Deploy to Hugging Face Spaces
+# Deploy the Space
 
-This repo is ready for a Gradio Space. The environment here is not logged in to Hugging Face, so deployment requires a write token from the account that will own the Space.
+1. Create a Docker Space with one Nvidia L4.
+2. Accept the MedGemma license for the account behind the token.
+3. Add `HF_TOKEN` as a Space secret.
+4. Push this repository unchanged.
 
-## Option A: Website
+Startup downloads the exact GGUF revisions in `scripts/prepare_runtime.py`, prepares X-Raydar, starts the pinned CUDA llama.cpp router on port 8080, verifies both model presets, and serves Gradio on port 7860.
 
-1. Create a new Space at `https://huggingface.co/new-space`.
-2. Choose SDK: `Gradio`.
-3. Use this repo's `README.md` frontmatter and `app.py`.
-4. Push the repository files to the Space repo.
-5. Add secrets if using hosted Nemotron:
-   - `HF_TOKEN`
-   - `RAD_TRAINER_TUTOR_PROVIDER=hf`
-   - `RAD_TRAINER_HF_PROVIDER=nvidia`
-   - `RAD_TRAINER_NEMOTRON_MODEL=nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16`
+Required router aliases:
 
-## Option B: Git Remote
+- `medgemma-professor`
+- `medgemma-localizer`
 
-```powershell
-uv run hf auth login
-uv run hf repo create <space-name> --type space --space-sdk gradio
-git remote add space https://huggingface.co/spaces/<user-or-org>/<space-name>
-git push space feat/radiology-trainer-mvp:main
+Deployment acceptance:
+
+```bash
+uv run python scripts/validate_golden_cases.py --app-url https://SPACE.hf.space
+uv run python scripts/benchmark_runtime.py --app-url https://SPACE.hf.space
 ```
 
-## Public Demo Defaults
+Commit the resulting reports as `artifacts/validation/space-golden-cases.json`
+and `artifacts/validation/space-runtime-benchmark.json`. The local equivalents
+are generated from the identical container before deployment.
 
-For a safe public Space, either leave model env vars unset or point to a separately hosted X-Raydar-compatible evidence endpoint. With env vars unset, the app will use:
+For a workstation GPU that also drives a desktop, record idle board usage before
+starting the container and pass it as `--gpu-baseline-mb`. The benchmark reports
+both raw board peak and application-attributed peak. Use `0` on a dedicated Space
+GPU.
 
-- synthetic demo cases
-- deterministic demo evidence
-- demo tutor text
-- no patient-image persistence
-
-For a real backend demo Space, set:
-
-- `RAD_TRAINER_MODEL_MODE=local`
-- `RAD_TRAINER_CHEST_EVIDENCE_URL=https://<your-evidence-service>/analyze`
-- `RAD_TRAINER_CHEST_EVIDENCE_TIMEOUT_SECONDS=180`
-
-Do not bundle X-Raydar weights into the public Space unless its non-commercial/research terms and Space hardware constraints are acceptable.
-
-## Local Nemotron Demo
-
-For a stronger recording, run locally with quantized Nemotron through vLLM:
-
-```powershell
-uv run python scripts/run_vllm_nemotron_wsl.py --detach --enforce-eager
-uv run python scripts/smoke_vllm_tutor.py --model nemotron3-nano-4B-FP8
-
-$env:RAD_TRAINER_TUTOR_PROVIDER="openai"
-$env:RAD_TRAINER_OPENAI_BASE_URL="http://localhost:8000/v1"
-$env:RAD_TRAINER_OPENAI_API_KEY="local"
-$env:RAD_TRAINER_NEMOTRON_MODEL="nemotron3-nano-4B-FP8"
-uv run python app.py
-```
-
-Then record the same flow:
-
-1. Pick `Right Lower Opacity`.
-2. Click `Analyze`.
-3. Show scorecard, tutor feedback, quiz, and session note.
+The Space profile uses an 8192-token professor context and full GPU offload.
+Docker Compose selects `runtime/models.local-wsl.ini`, a separate 6144-token,
+full-offload profile for a desktop RTX 4090. Move the
+Space to L40S if the L4 exceeds 22 GB peak VRAM, stays below 5 generated tokens/s,
+or has warm first-token latency above 20 seconds after the documented 6K fallback
+has also been measured.

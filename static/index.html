@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0c0f10">
+  <title>Backyard Radiology Professor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js" defer></script>
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand-block">
+      <div class="brand">Backyard Radiology Professor</div>
+      <div class="scope">Chest radiograph training workstation</div>
+    </div>
+    <div class="topbar-actions">
+      <span class="runtime-state" id="runtime-state"><i class="state-dot"></i><span>Checking runtime</span></span>
+      <button class="icon-button" id="theme-button" title="Change color theme" aria-label="Change color theme"><i data-lucide="sun-moon"></i></button>
+      <button class="icon-button" id="help-button" title="Open walkthrough" aria-label="Open walkthrough"><i data-lucide="circle-help"></i></button>
+      <button class="icon-button" id="diagnostics-button" title="Runtime diagnostics" aria-label="Runtime diagnostics"><i data-lucide="activity"></i></button>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <aside class="study-rail">
+      <div class="rail-heading">
+        <span>Practice studies</span>
+        <span class="numeric-label"><strong id="progress-count">0 / 3</strong><button class="info-tip" data-tip="Completed public practice cases out of the three bundled cases." aria-label="Explain practice progress">?</button></span>
+      </div>
+      <div id="case-list" class="case-list" aria-label="Demo cases"></div>
+      <label class="upload-action" for="file-input">
+        <i data-lucide="folder-up"></i>
+        <span>Open image or DICOM study</span>
+      </label>
+      <input id="file-input" type="file" accept="image/*,.dcm,.dicom,.zip,application/zip" multiple hidden>
+
+      <div class="study-heading hidden" id="study-heading">
+        <span>Study images</span>
+        <span class="numeric-label"><strong id="image-count">0</strong><button class="info-tip" data-tip="Number of radiographs or frames in the current study." aria-label="Explain image count">?</button></span>
+      </div>
+      <div id="study-list" class="study-list"></div>
+      <div class="source-note">AI analysis is enabled only for chest CR/DX radiographs.</div>
+    </aside>
+
+    <section class="image-workspace">
+      <div class="viewer-toolbar">
+        <div class="case-context">
+          <span id="case-kicker">NO STUDY</span>
+          <strong id="case-title">Select a case or open a study</strong>
+        </div>
+        <div class="toolbar-clusters">
+          <div class="segmented" aria-label="Viewer layout">
+            <button class="segment active" data-layout="single" title="Single image"><i data-lucide="square"></i></button>
+            <button class="segment" data-layout="two-up" title="Two-up comparison"><i data-lucide="columns-2"></i></button>
+          </div>
+          <div class="segmented" aria-label="Viewer tool">
+            <button class="segment active" data-tool="pan" title="Pan"><i data-lucide="hand"></i></button>
+            <button class="segment" data-tool="window" title="Window and level"><i data-lucide="sliders-horizontal"></i></button>
+            <button class="segment" data-tool="ruler" title="Measure"><i data-lucide="ruler"></i></button>
+          </div>
+          <select id="window-preset" title="Window preset" aria-label="Window preset" disabled>
+            <option>Original</option>
+          </select>
+          <button class="icon-button" id="fit-view" title="Fit image" aria-label="Fit image"><i data-lucide="maximize"></i></button>
+          <button class="icon-button" id="zoom-out" title="Zoom out" aria-label="Zoom out"><i data-lucide="zoom-out"></i></button>
+          <span class="numeric-label toolbar-number"><strong id="zoom-level">100%</strong><button class="info-tip" data-tip="Current magnification of the active image." aria-label="Explain zoom level">?</button></span>
+          <button class="icon-button" id="zoom-in" title="Zoom in" aria-label="Zoom in"><i data-lucide="zoom-in"></i></button>
+          <button class="icon-button" id="rotate-view" title="Rotate clockwise" aria-label="Rotate clockwise"><i data-lucide="rotate-cw"></i></button>
+          <button class="icon-button" id="flip-view" title="Flip horizontally" aria-label="Flip horizontally"><i data-lucide="flip-horizontal-2"></i></button>
+          <button class="icon-button" id="invert-view" title="Invert image" aria-label="Invert image"><i data-lucide="circle-half"></i></button>
+          <button class="icon-button" id="reset-view" title="Reset active image" aria-label="Reset active image"><i data-lucide="undo-2"></i></button>
+          <button class="icon-button" id="metadata-button" title="DICOM metadata" aria-label="DICOM metadata"><i data-lucide="list-tree"></i></button>
+        </div>
+      </div>
+
+      <div class="viewer-grid single" id="viewer-grid">
+        <div class="viewport active" data-viewport="primary">
+          <canvas class="xray-canvas" id="primary-canvas" width="900" height="900"></canvas>
+          <div class="viewport-label" id="primary-label">Primary</div>
+        </div>
+        <div class="viewport hidden" data-viewport="secondary">
+          <canvas class="xray-canvas" id="secondary-canvas" width="900" height="900"></canvas>
+          <div class="viewport-label" id="secondary-label">Comparison</div>
+        </div>
+        <div class="viewer-empty" id="viewer-empty">
+          <i data-lucide="scan-line"></i>
+          <span>Load a chest radiograph to begin</span>
+        </div>
+      </div>
+
+      <div class="viewer-footer">
+        <div class="footer-values">
+          <span class="numeric-label">W <strong id="window-width">--</strong><button class="info-tip" data-tip="Window width controls the displayed intensity range. A wider value shows more grayscale levels." aria-label="Explain window width">?</button></span>
+          <span class="numeric-label">L <strong id="window-center">--</strong><button class="info-tip" data-tip="Window level is the midpoint of the displayed intensity range." aria-label="Explain window level">?</button></span>
+          <span class="numeric-label">Size <strong id="image-dimensions">--</strong><button class="info-tip" data-tip="Native pixel dimensions of the active radiograph." aria-label="Explain image dimensions">?</button></span>
+          <span class="numeric-label">Measure <strong id="measurement-value">--</strong><button class="info-tip" data-tip="Ruler distance. Millimeters are shown only when DICOM pixel spacing is available." aria-label="Explain measurement">?</button></span>
+        </div>
+        <span id="active-tool">Pan tool</span>
+      </div>
+    </section>
+
+    <aside class="inspector">
+      <nav class="inspector-tabs" aria-label="Workstation panels">
+        <button class="inspector-tab active" data-panel="read">Read</button>
+        <button class="inspector-tab" data-panel="evidence">Evidence</button>
+        <button class="inspector-tab" data-panel="chat">Professor</button>
+      </nav>
+
+      <section class="inspector-panel active" id="panel-read">
+        <div class="panel-heading">
+          <div>
+            <span>Blind interpretation</span>
+            <strong>Commit your read</strong>
+          </div>
+          <i data-lucide="lock-keyhole"></i>
+        </div>
+        <textarea id="blind-read" rows="12" placeholder="Enter findings and impression in your normal language..."></textarea>
+        <button class="primary-action" id="commit-read" disabled><i data-lucide="scan-search"></i>Analyze committed read</button>
+        <button class="secondary-action hidden" id="new-session"><i data-lucide="refresh-cw"></i>Start another read</button>
+        <p class="utility-note">Model evidence stays hidden until the read is committed.</p>
+      </section>
+
+      <section class="inspector-panel" id="panel-evidence">
+        <div class="analysis-progress hidden" id="analysis-progress">
+          <div class="progress-row" data-stage="xraydar"><i></i><span>X-Raydar classification</span></div>
+          <div class="progress-row" data-stage="localizer-load"><i></i><span>Load MedGemma localizer</span></div>
+          <div class="progress-row" data-stage="localizer"><i></i><span>Observations and regions</span></div>
+          <div class="progress-row" data-stage="professor-load"><i></i><span>Load MedGemma professor</span></div>
+          <div class="progress-row" data-stage="professor"><i></i><span>Professor review</span></div>
+          <p id="progress-message">Waiting for inference.</p>
+        </div>
+        <div id="evidence-content" class="hidden">
+          <div class="subtabs">
+            <button class="subtab active" data-subpanel="findings">Findings</button>
+            <button class="subtab" data-subpanel="regions">Regions</button>
+            <button class="subtab" data-subpanel="comparison">Comparison</button>
+          </div>
+          <div class="subpanel active" id="subpanel-findings"></div>
+          <div class="subpanel" id="subpanel-regions"></div>
+          <div class="subpanel" id="subpanel-comparison"></div>
+        </div>
+      </section>
+
+      <section class="inspector-panel chat-panel" id="panel-chat">
+        <div class="chat-heading">
+          <div>
+            <span>MedGemma 27B</span>
+            <strong>Radiology professor</strong>
+          </div>
+          <span class="model-state" id="professor-state">Waiting for analysis</span>
+        </div>
+        <div class="chat-suggestions">
+          <button data-prompt="Explain the most important missed concept in my read.">Explain miss</button>
+          <button data-prompt="Build a focused differential and explain the discriminating signs.">Differential</button>
+          <button data-prompt="Quiz me on this case without revealing the answer first.">Quiz me</button>
+          <button data-prompt="Compare the frontal and lateral views.">Compare views</button>
+        </div>
+        <div class="chat-messages" id="chat-messages">
+          <div class="chat-empty">Complete an analysis to start a grounded conversation.</div>
+        </div>
+        <div class="chat-composer">
+          <textarea id="chat-input" rows="2" placeholder="Ask about the image, evidence, or your interpretation..." disabled></textarea>
+          <button class="icon-button send-button" id="chat-send" title="Send question" aria-label="Send question" disabled><i data-lucide="send"></i></button>
+        </div>
+        <div class="session-actions">
+          <button class="secondary-action" id="export-markdown" disabled><i data-lucide="file-down"></i>Markdown</button>
+          <button class="secondary-action" id="export-json" disabled><i data-lucide="braces"></i>JSON</button>
+        </div>
+        <div class="feedback">
+          <span>Usefulness</span>
+          <div class="rating" id="rating">
+            <button data-rating="1" title="Usefulness rating 1 of 5">1</button>
+            <button data-rating="2" title="Usefulness rating 2 of 5">2</button>
+            <button data-rating="3" title="Usefulness rating 3 of 5">3</button>
+            <button data-rating="4" title="Usefulness rating 4 of 5">4</button>
+            <button data-rating="5" title="Usefulness rating 5 of 5">5</button>
+          </div>
+          <textarea id="feedback-comment" rows="2" placeholder="What changed in your read?"></textarea>
+          <button class="secondary-action" id="submit-feedback">Save to session</button>
+        </div>
+      </section>
+      <div class="error-banner hidden" id="error-banner"></div>
+    </aside>
+  </main>
+
+  <dialog id="onboarding-dialog" class="onboarding-dialog">
+    <div class="onboarding-visual">
+      <i data-lucide="scan-line"></i>
+      <span>Educational chest radiograph practice</span>
+    </div>
+    <div class="onboarding-content">
+      <button class="icon-button dialog-close" id="close-onboarding" aria-label="Close walkthrough"><i data-lucide="x"></i></button>
+      <div class="walkthrough-step active" data-step="0">
+        <span class="eyebrow">Step 1</span>
+        <h1>Read before the models</h1>
+        <p>Select a public case or open a CR/DX study. Manipulate the image, enter findings naturally, then lock the interpretation.</p>
+      </div>
+      <div class="walkthrough-step" data-step="1">
+        <span class="eyebrow">Step 2</span>
+        <h1>Inspect attributed evidence</h1>
+        <p>X-Raydar scores and MedGemma regions stay separate. Regions can be focused, faded, hidden, removed, and restored.</p>
+      </div>
+      <div class="walkthrough-step" data-step="2">
+        <span class="eyebrow">Step 3</span>
+        <h1>Question the professor</h1>
+        <p>MedGemma 27B sees the study, blind read, model evidence, and conversation. Use the chat to explain, compare, differentiate, or quiz.</p>
+        <div class="shortcut-list"><kbd>F</kbd> fit <kbd>I</kbd> invert <kbd>R</kbd> ruler <kbd>W</kbd> window <kbd>Esc</kbd> pan</div>
+      </div>
+      <div class="walkthrough-footer">
+        <div class="step-dots"><i class="active"></i><i></i><i></i></div>
+        <button class="primary-action compact" id="walkthrough-next">Next</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="diagnostics-dialog">
+    <div class="dialog-heading">
+      <div><span>Runtime</span><strong>Model diagnostics</strong></div>
+      <button class="icon-button" data-close-dialog="diagnostics-dialog" aria-label="Close diagnostics"><i data-lucide="x"></i></button>
+    </div>
+    <pre id="diagnostics-content"></pre>
+  </dialog>
+
+  <dialog id="metadata-dialog">
+    <div class="dialog-heading">
+      <div><span>Study</span><strong>DICOM metadata</strong></div>
+      <button class="icon-button" data-close-dialog="metadata-dialog" aria-label="Close metadata"><i data-lucide="x"></i></button>
+    </div>
+    <div id="metadata-content" class="metadata-table"></div>
+  </dialog>
+</body>
+</html>

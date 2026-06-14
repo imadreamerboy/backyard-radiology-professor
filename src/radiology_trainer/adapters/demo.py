@@ -71,7 +71,7 @@ class DemoChestEvidenceModel:
 
 @dataclass
 class DemoTutorModel:
-    name: str = "demo-nemotron-tutor"
+    name: str = "demo-medgemma-professor"
 
     def coach(self, evidence: EvidenceBundle, student_read: StudentRead) -> TutorResponse:
         top = evidence.top_findings(3)
@@ -90,8 +90,8 @@ class DemoTutorModel:
 
         return TutorResponse(
             summary=(
-                "Educational demo response. In local mode this slot is intended for Nemotron "
-                "as the tutoring and reasoning layer."
+                "Educational demo response. In local mode this slot is handled by the "
+                "MedGemma 27B radiology professor."
             ),
             feedback=feedback,
             suggested_checks=[
@@ -164,4 +164,3 @@ def _demo_regions(findings: list[FindingScore]) -> list[RegionBox]:
             )
         )
     return regions
-

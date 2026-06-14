@@ -1,0 +1,189 @@
+{
+  "passed": true,
+  "app_url": "http://127.0.0.1:7860",
+  "runtime_status": {
+    "mode": "local",
+    "runtime": "llama.cpp",
+    "runtime_revision": "b8772-bafae2765",
+    "runtime_status": "ready",
+    "models": [
+      {
+        "id": "default",
+        "status": "unloaded",
+        "architecture": {}
+      },
+      {
+        "id": "medgemma-localizer",
+        "status": "unloaded",
+        "architecture": {}
+      },
+      {
+        "id": "medgemma-professor",
+        "status": "loaded",
+        "architecture": {}
+      }
+    ],
+    "model_revisions": [
+      {
+        "id": "medgemma-professor",
+        "source": "unsloth/medgemma-27b-it-GGUF",
+        "revision": "536e4d49c749bfca5aaa328bb7df3201e38e5d12",
+        "quantization": "Q4_K_M"
+      },
+      {
+        "id": "medgemma-localizer",
+        "source": "unsloth/medgemma-1.5-4b-it-GGUF",
+        "revision": "3855f948626b7ae42bccd082757f15078c53e758",
+        "quantization": "Q4_K_M"
+      }
+    ],
+    "required_models": [
+      "medgemma-professor",
+      "medgemma-localizer"
+    ],
+    "models_max": 1,
+    "queue_depth": 0,
+    "xraydar_available": true,
+    "xraydar": {
+      "source": "dnamodel/xraydar-cv",
+      "weights_revision": "34aec5a6a8d639b4ebe717f2e5a5499b8f00c493",
+      "code_revision": "f62b1a1404390bec697c6a6504f9d80193e8f93c"
+    },
+    "gpu": {
+      "name": "NVIDIA GeForce RTX 4090",
+      "memory_used_mb": 22999,
+      "memory_total_mb": 24564,
+      "utilization_percent": 31
+    },
+    "detail": ""
+  },
+  "host_baseline_gpu_memory_mb": 5364,
+  "peak_gpu_memory_mb": 23579,
+  "peak_application_gpu_memory_mb": 18215,
+  "runs": [
+    {
+      "index": 0,
+      "temperature": "cold",
+      "passed": true,
+      "analysis_latency_ms": 41088,
+      "chat_latency_ms": 17175,
+      "image_sha256": "37cbe3f77ca8d19a7eba72f98306360deceb6f2852b5a51e1b55bf4451c577da",
+      "model_runs": [
+        {
+          "role": "classifier",
+          "model_id": "dnamodel/xraydar-cv",
+          "model_source": "dnamodel/xraydar-cv",
+          "model_revision": "34aec5a6a8d639b4ebe717f2e5a5499b8f00c493",
+          "runtime": "PyTorch",
+          "runtime_revision": "f62b1a1404390bec697c6a6504f9d80193e8f93c",
+          "status": "ok",
+          "latency_ms": 1835,
+          "time_to_first_token_ms": null,
+          "tokens_per_second": null,
+          "detail": ""
+        },
+        {
+          "role": "vision",
+          "model_id": "medgemma-localizer",
+          "model_source": "unsloth/medgemma-1.5-4b-it-GGUF",
+          "model_revision": "3855f948626b7ae42bccd082757f15078c53e758",
+          "runtime": "llama.cpp",
+          "runtime_revision": "b8772-bafae2765",
+          "status": "ok",
+          "latency_ms": 7022,
+          "time_to_first_token_ms": null,
+          "tokens_per_second": null,
+          "detail": ""
+        },
+        {
+          "role": "professor",
+          "model_id": "medgemma-professor",
+          "model_source": "unsloth/medgemma-27b-it-GGUF",
+          "model_revision": "536e4d49c749bfca5aaa328bb7df3201e38e5d12",
+          "runtime": "llama.cpp",
+          "runtime_revision": "b8772-bafae2765",
+          "status": "ok",
+          "latency_ms": 22836,
+          "time_to_first_token_ms": null,
+          "tokens_per_second": null,
+          "detail": ""
+        },
+        {
+          "role": "professor-chat",
+          "model_id": "medgemma-professor",
+          "model_source": "unsloth/medgemma-27b-it-GGUF",
+          "model_revision": "536e4d49c749bfca5aaa328bb7df3201e38e5d12",
+          "runtime": "llama.cpp",
+          "runtime_revision": "b8772-bafae2765",
+          "status": "ok",
+          "latency_ms": 16592,
+          "time_to_first_token_ms": 2764,
+          "tokens_per_second": 19.467078796368927,
+          "detail": ""
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "temperature": "warm",
+      "passed": true,
+      "analysis_latency_ms": 36517,
+      "chat_latency_ms": 13417,
+      "image_sha256": "37cbe3f77ca8d19a7eba72f98306360deceb6f2852b5a51e1b55bf4451c577da",
+      "model_runs": [
+        {
+          "role": "classifier",
+          "model_id": "dnamodel/xraydar-cv",
+          "model_source": "dnamodel/xraydar-cv",
+          "model_revision": "34aec5a6a8d639b4ebe717f2e5a5499b8f00c493",
+          "runtime": "PyTorch",
+          "runtime_revision": "f62b1a1404390bec697c6a6504f9d80193e8f93c",
+          "status": "ok",
+          "latency_ms": 871,
+          "time_to_first_token_ms": null,
+          "tokens_per_second": null,
+          "detail": ""
+        },
+        {
+          "role": "vision",
+          "model_id": "medgemma-localizer",
+          "model_source": "unsloth/medgemma-1.5-4b-it-GGUF",
+          "model_revision": "3855f948626b7ae42bccd082757f15078c53e758",
+          "runtime": "llama.cpp",
+          "runtime_revision": "b8772-bafae2765",
+          "status": "ok",
+          "latency_ms": 7149,
+          "time_to_first_token_ms": null,
+          "tokens_per_second": null,
+          "detail": ""
+        },
+        {
+          "role": "professor",
+          "model_id": "medgemma-professor",
+          "model_source": "unsloth/medgemma-27b-it-GGUF",
+          "model_revision": "536e4d49c749bfca5aaa328bb7df3201e38e5d12",
+          "runtime": "llama.cpp",
+          "runtime_revision": "b8772-bafae2765",
+          "status": "ok",
+          "latency_ms": 19961,
+          "time_to_first_token_ms": null,
+          "tokens_per_second": null,
+          "detail": ""
+        },
+        {
+          "role": "professor-chat",
+          "model_id": "medgemma-professor",
+          "model_source": "unsloth/medgemma-27b-it-GGUF",
+          "model_revision": "536e4d49c749bfca5aaa328bb7df3201e38e5d12",
+          "runtime": "llama.cpp",
+          "runtime_revision": "b8772-bafae2765",
+          "status": "ok",
+          "latency_ms": 12832,
+          "time_to_first_token_ms": 2352,
+          "tokens_per_second": 21.585421182469883,
+          "detail": ""
+        }
+      ]
+    }
+  ]
+}

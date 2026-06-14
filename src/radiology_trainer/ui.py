@@ -1,226 +1,324 @@
 from __future__ import annotations
 
+import json
+import os
+import subprocess
+from io import BytesIO
+from pathlib import Path
+from typing import Any, Iterator
+
 import gradio as gr
+from fastapi import File, Form, HTTPException, UploadFile
+from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field
 
+from radiology_trainer.adapters.llama_client import LlamaCppClient
+from radiology_trainer.cases import demo_cases
 from radiology_trainer.config import AppConfig
-from radiology_trainer.domain import StudentRead
-from radiology_trainer.examples import example_case_label, example_cases
-from radiology_trainer.image_io import load_xray_image
-from radiology_trainer.learning import build_scorecard, format_scorecard
-from radiology_trainer.overlays import draw_regions
-from radiology_trainer.pipeline import build_pipeline
-from radiology_trainer.reporting import format_session_note
+from radiology_trainer.runtime_manifest import (
+    LLAMA_CPP_BUILD,
+    LOCALIZER_QUANTIZATION,
+    LOCALIZER_REPO,
+    PROFESSOR_QUANTIZATION,
+    PROFESSOR_REPO,
+    XRAYDAR_CODE_REVISION,
+    XRAYDAR_REPO,
+)
+from radiology_trainer.service import TrainerService
 
 
-APP_CSS = """
-:root {
-  --rt-accent: #3b82f6;
-  --rt-ink: #0f172a;
-  --rt-muted: #64748b;
-}
-.gradio-container {
-  max-width: 1440px !important;
-}
-#app-title h1 {
-  font-size: 32px;
-  letter-spacing: 0;
-  margin-bottom: 4px;
-}
-#app-title p {
-  color: var(--rt-muted);
-  margin-top: 0;
-}
-.status-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border: 1px solid #d8dee8;
-  border-radius: 999px;
-  padding: 4px 10px;
-  color: #334155;
-  background: #f8fafc;
-  font-size: 13px;
-}
-.gradio-container button.primary,
-.gradio-container button.primary:hover,
-.gradio-container .primary > button {
-  background: var(--rt-accent) !important;
-  border-color: var(--rt-accent) !important;
-  color: #ffffff !important;
-}
-.gradio-container button.primary:hover,
-.gradio-container .primary > button:hover {
-  background: #2563eb !important;
-}
-"""
+ROOT = Path(__file__).resolve().parents[2]
+STATIC_DIR = ROOT / "static"
 
 
-def create_theme() -> gr.Theme:
-    return gr.themes.Soft(
-        primary_hue="blue",
-        neutral_hue="slate",
-        radius_size="sm",
-    )
+class AnalyzeRequest(BaseModel):
+    observation: str = Field(min_length=1, max_length=8000)
 
 
-def create_app(config: AppConfig | None = None) -> gr.Blocks:
+class ChatRequest(BaseModel):
+    message: str = Field(min_length=1, max_length=4000)
+
+
+class FeedbackRequest(BaseModel):
+    session_id: str | None = None
+    case_id: str | None = None
+    rating: int = Field(ge=1, le=5)
+    comment: str = Field(default="", max_length=1000)
+
+
+def create_server(config: AppConfig | None = None) -> gr.Server:
     cfg = config or AppConfig.from_env()
-    cases = example_cases()
+    service = TrainerService(cfg)
+    server = gr.Server(
+        title="Backyard Radiology Professor",
+        description="Educational chest radiograph practice workstation",
+        docs_url="/api/docs",
+        redoc_url=None,
+    )
+    server.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
-    with gr.Blocks(title="Backyard Radiology Trainer") as demo:
-        gr.Markdown(
-            """
-# Backyard Radiology Trainer
-Educational chest X-ray practice: blind read first, evidence second, tutor last.
-""",
-            elem_id="app-title",
-        )
+    @server.get("/", include_in_schema=False)
+    def index() -> FileResponse:
+        return FileResponse(STATIC_DIR / "index.html")
 
-        with gr.Row(equal_height=False):
-            with gr.Column(scale=5):
-                file_input = gr.File(
-                    label="X-ray image or DICOM",
-                    file_types=["image", ".dcm", ".dicom"],
-                    type="filepath",
-                )
-                overlay_output = gr.Image(label="Preview and evidence overlay", type="pil", height=560)
+    @server.get("/api/cases")
+    def cases() -> list[dict[str, Any]]:
+        return [
+            {
+                "id": case.id,
+                "title": case.title,
+                "difficulty": case.difficulty,
+                "available": Path(case.image_path).exists(),
+                "reference_source": case.reference.source,
+            }
+            for case in demo_cases(cfg.xraydar_backend_dir)
+        ]
 
-            with gr.Column(scale=4):
-                blind_read = gr.Textbox(
-                    label="Your blind read",
-                    placeholder="Example: PA chest radiograph. Cardiomediastinal silhouette...",
-                    lines=8,
-                )
-                question = gr.Textbox(
-                    label="Question for the tutor",
-                    placeholder="What should I double-check before calling this normal?",
-                    lines=3,
-                )
-                run_button = gr.Button("Analyze", variant="primary")
-                gr.HTML(
-                    f"""
-<span class="status-pill">mode: {cfg.model_mode}</span>
-<span class="status-pill">tutor: {cfg.tutor_provider}</span>
-<span class="status-pill">hf provider: {cfg.hf_provider or "auto"}</span>
-<span class="status-pill">evidence: {"external" if cfg.chest_evidence_url else "demo"}</span>
-<span class="status-pill">medical vlm: {"on" if cfg.enable_medical_vlm else "off"}</span>
-<span class="status-pill">nemotron: {cfg.nemotron_model}</span>
-"""
-                )
-                gr.Markdown("**Synthetic demo cases**")
-                with gr.Row():
-                    for idx, case in enumerate(cases):
-                        gr.Button(example_case_label(case[0]), size="sm").click(
-                            fn=lambda case_index=idx: _load_example_case(case_index),
-                            inputs=None,
-                            outputs=[file_input, blind_read, question],
-                        )
+    @server.post("/api/sessions")
+    async def create_session(
+        case_id: str | None = Form(default=None),
+        files: list[UploadFile] = File(default=[]),
+    ) -> JSONResponse:
+        try:
+            if case_id:
+                session = service.create_demo_session(case_id)
+            else:
+                uploads = [
+                    (upload.filename or "upload", await upload.read())
+                    for upload in files
+                    if upload.filename
+                ]
+                session = service.create_upload_session(uploads)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail="Unknown demo case.") from exc
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        return JSONResponse(session.model_dump(mode="json"))
 
-        with gr.Row():
-            evidence_table = gr.Dataframe(
-                headers=["Finding", "Score", "Source", "Note"],
-                label="Structured evidence",
-                interactive=False,
-                wrap=True,
+    @server.get("/api/sessions/{session_id}")
+    def get_session(session_id: str) -> JSONResponse:
+        try:
+            session = service.get_session(session_id)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return JSONResponse(session.model_dump(mode="json"))
+
+    @server.delete("/api/sessions/{session_id}")
+    def delete_session(session_id: str) -> dict[str, bool]:
+        service.delete_session(session_id)
+        return {"deleted": True}
+
+    @server.get("/api/sessions/{session_id}/images/{image_id}")
+    def study_image(
+        session_id: str,
+        image_id: str,
+        center: float | None = None,
+        width: float | None = None,
+        invert: bool = False,
+    ) -> Response:
+        try:
+            image = service.render_image(
+                session_id,
+                image_id,
+                center=center,
+                width=width,
+                invert=invert,
             )
-            quality_output = gr.JSON(label="Image quality and routing")
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        with BytesIO() as buffer:
+            image.save(buffer, format="PNG")
+            return Response(
+                content=buffer.getvalue(),
+                media_type="image/png",
+                headers={"Cache-Control": "private, max-age=60"},
+            )
 
-        with gr.Row():
-            scorecard_output = gr.Markdown(label="Blind-read scorecard")
-            tutor_summary = gr.Markdown(label="Tutor summary")
-            tutor_quiz = gr.Markdown(label="Quiz")
-
-        with gr.Accordion("Copy-ready session note", open=False):
-            session_note = gr.Markdown()
-
-        model_notes = gr.Markdown(label="Model notes")
-
-        run_button.click(
-            fn=_run_analysis,
-            inputs=[file_input, blind_read, question],
-            outputs=[
-                overlay_output,
-                evidence_table,
-                quality_output,
-                scorecard_output,
-                tutor_summary,
-                tutor_quiz,
-                session_note,
-                model_notes,
-            ],
+    @server.post("/api/sessions/{session_id}/analyze")
+    def analyze_session(session_id: str, request: AnalyzeRequest) -> StreamingResponse:
+        try:
+            events = service.analyze_stream(session_id, request.observation)
+        except (KeyError, ValueError) as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        return StreamingResponse(
+            _sse(events),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
         )
 
-    return demo
+    @server.post("/api/sessions/{session_id}/chat")
+    def chat_session(session_id: str, request: ChatRequest) -> StreamingResponse:
+        try:
+            events = service.chat_stream(session_id, request.message)
+        except (KeyError, ValueError) as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        return StreamingResponse(
+            _sse(events),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        )
+
+    @server.get("/api/status")
+    def status() -> dict[str, Any]:
+        required = [cfg.professor_model, cfg.localizer_model]
+        model_states: list[dict[str, Any]] = []
+        detail = ""
+        if cfg.model_mode == "demo":
+            runtime_status = "demo"
+        else:
+            llama = LlamaCppClient(
+                base_url=cfg.llama_base_url,
+                api_key=cfg.llama_api_key,
+                timeout_seconds=10,
+            )
+            try:
+                models = llama.list_models()
+                known = {str(item.get("id", "")) for item in models}
+                model_states = [
+                    {
+                        "id": str(item.get("id", "")),
+                        "status": (item.get("status") or {}).get("value", "unknown"),
+                        "architecture": item.get("architecture") or {},
+                    }
+                    for item in models
+                ]
+                missing = set(required) - known
+                runtime_status = "ready" if not missing else "loading"
+                if missing:
+                    detail = f"Waiting for model presets: {', '.join(sorted(missing))}"
+            except Exception as exc:
+                runtime_status = "unavailable"
+                detail = str(exc)
+        return {
+            "mode": cfg.model_mode,
+            "runtime": "llama.cpp",
+            "runtime_revision": LLAMA_CPP_BUILD,
+            "runtime_status": runtime_status,
+            "models": model_states,
+            "model_revisions": [
+                {
+                    "id": cfg.professor_model,
+                    "source": PROFESSOR_REPO,
+                    "revision": cfg.professor_revision,
+                    "quantization": PROFESSOR_QUANTIZATION,
+                },
+                {
+                    "id": cfg.localizer_model,
+                    "source": LOCALIZER_REPO,
+                    "revision": cfg.localizer_revision,
+                    "quantization": LOCALIZER_QUANTIZATION,
+                },
+            ],
+            "required_models": required,
+            "models_max": 1,
+            "queue_depth": service.queue_depth,
+            "xraydar_available": (
+                cfg.model_mode == "demo" or Path(cfg.xraydar_backend_dir).exists()
+            ),
+            "xraydar": {
+                "source": XRAYDAR_REPO,
+                "weights_revision": cfg.xraydar_revision,
+                "code_revision": XRAYDAR_CODE_REVISION,
+            },
+            "gpu": _gpu_status(),
+            "detail": detail,
+        }
+
+    @server.post("/api/feedback")
+    def feedback(request: FeedbackRequest) -> dict[str, Any]:
+        return {
+            "accepted": True,
+            "session_id": request.session_id,
+            "case_id": request.case_id,
+            "rating": request.rating,
+            "comment": request.comment.strip(),
+            "persisted": False,
+        }
+
+    # Kept while command-line validators migrate to the session API.
+    @server.post("/api/analyze")
+    async def compatibility_analyze(
+        case_id: str | None = Form(default=None),
+        observation: str = Form(...),
+        question: str = Form(default=""),
+        image: UploadFile | None = File(default=None),
+    ) -> JSONResponse:
+        try:
+            if case_id:
+                session = service.create_demo_session(case_id)
+            elif image:
+                session = service.create_upload_session(
+                    [(image.filename or "upload", await image.read())]
+                )
+            else:
+                raise ValueError("Select a case or upload an image.")
+            completed = None
+            for event in service.analyze_stream(session.id, observation):
+                if event.get("type") == "error":
+                    raise RuntimeError(str(event.get("message")))
+                if event.get("type") == "complete":
+                    completed = service.get_session(session.id).result
+            if completed is None:
+                raise RuntimeError("Analysis did not return a completed result.")
+            if question.strip():
+                for _ in service.chat_stream(session.id, question):
+                    pass
+            return JSONResponse(completed.model_dump(mode="json"))
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    @server.api(name="runtime_status", queue=False)
+    def runtime_status() -> str:
+        return f"{cfg.model_mode}: llama.cpp + MedGemma + X-Raydar"
+
+    return server
 
 
-def _load_example_case(case_index: int) -> tuple[str, str, str]:
-    file_path, blind_read, question = example_cases()[case_index]
-    return file_path, blind_read, question
+def launch_server(config: AppConfig | None = None) -> None:
+    server = create_server(config)
+    server.launch(
+        server_name=os.getenv("GRADIO_SERVER_NAME", "0.0.0.0"),
+        server_port=int(os.getenv("GRADIO_SERVER_PORT", "7860")),
+        show_error=True,
+        max_file_size=f"{(config or AppConfig.from_env()).max_upload_mb}mb",
+        _frontend=False,
+    )
 
 
-def _run_analysis(file_path: str | None, blind_read: str, question: str):
-    if not file_path:
-        raise gr.Error("Upload an X-ray image or DICOM first.")
-
+def _sse(events: Iterator[dict[str, Any]]) -> Iterator[str]:
     try:
-        image = load_xray_image(file_path)
+        for event in events:
+            event_type = str(event.get("type", "message"))
+            yield f"event: {event_type}\ndata: {json.dumps(event, ensure_ascii=True)}\n\n"
     except Exception as exc:
-        raise gr.Error(str(exc)) from exc
-
-    pipeline = build_pipeline(AppConfig.from_env())
-    evidence, tutor = pipeline.analyze(
-        image=image,
-        student_read=StudentRead(observation=blind_read or "", question=question or ""),
-    )
-    scorecard = build_scorecard(
-        evidence=evidence,
-        student_read=StudentRead(observation=blind_read or "", question=question or ""),
-    )
-
-    overlay = draw_regions(image, evidence.regions) if evidence.regions else image
-    rows = [
-        [finding.label, round(finding.score, 3), finding.source, finding.explanation]
-        for finding in evidence.top_findings(7)
-    ]
-    quality = {
-        "anatomy": evidence.anatomy.value,
-        "quality": evidence.quality.model_dump(),
-        "agreement_notes": evidence.agreement_notes,
-    }
-    scorecard_md = format_scorecard(scorecard)
-    tutor_md = _format_tutor(tutor)
-    quiz_md = "\n".join(f"{idx + 1}. {item}" for idx, item in enumerate(tutor.quiz))
-    session_note_md = format_session_note(
-        evidence=evidence,
-        scorecard=scorecard,
-        student_read=StudentRead(observation=blind_read or "", question=question or ""),
-        tutor=tutor,
-    )
-    notes_md = "\n".join(f"- {note}" for note in evidence.model_notes)
-
-    return overlay, rows, quality, scorecard_md, tutor_md, quiz_md, session_note_md, notes_md
+        payload = json.dumps({"type": "error", "message": str(exc)}, ensure_ascii=True)
+        yield f"event: error\ndata: {payload}\n\n"
 
 
-def _format_tutor(tutor) -> str:
-    feedback = "\n".join(f"- {item}" for item in tutor.feedback)
-    checks = "\n".join(f"- {item}" for item in tutor.suggested_checks)
-    uncertainty = "\n".join(f"- {item}" for item in tutor.uncertainty)
-    return f"""
-**Provider:** `{tutor.provider}`
-
-**Summary**
-
-{tutor.summary}
-
-**Feedback**
-
-{feedback}
-
-**Suggested checks**
-
-{checks}
-
-**Uncertainty**
-
-{uncertainty}
-"""
+def _gpu_status() -> dict[str, Any] | None:
+    try:
+        output = subprocess.run(
+            [
+                "nvidia-smi",
+                "--query-gpu=name,memory.used,memory.total,utilization.gpu",
+                "--format=csv,noheader,nounits",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        ).stdout.strip()
+        name, used, total, utilization = [item.strip() for item in output.splitlines()[0].split(",")]
+        return {
+            "name": name,
+            "memory_used_mb": int(used),
+            "memory_total_mb": int(total),
+            "utilization_percent": int(utilization),
+        }
+    except Exception:
+        return None

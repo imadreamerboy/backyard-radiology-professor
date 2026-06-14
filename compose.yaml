@@ -1,0 +1,19 @@
+services:
+  radiology-trainer:
+    build:
+      context: .
+    ports:
+      - "7860:7860"
+    environment:
+      HF_TOKEN: ${HF_TOKEN:-}
+      RAD_TRAINER_LLAMA_API_KEY: local
+      RAD_TRAINER_LLAMA_PRESET: runtime/models.local-wsl.ini
+    volumes:
+      - ./outputs:/workspace/outputs
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

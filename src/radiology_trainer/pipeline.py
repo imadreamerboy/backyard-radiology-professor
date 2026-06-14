@@ -1,15 +1,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 
 from PIL import Image
 
 from radiology_trainer.adapters.base import EvidenceModel, TutorModel
 from radiology_trainer.adapters.demo import DemoChestEvidenceModel, DemoTutorModel
 from radiology_trainer.adapters.hybrid import HybridChestEvidenceModel
-from radiology_trainer.adapters.http_evidence import HTTPChestEvidenceModel
+from radiology_trainer.adapters.llama_client import LlamaCppClient
 from radiology_trainer.adapters.medgemma import MedGemmaVisionTool
-from radiology_trainer.adapters.nemotron import NemotronTutorModel
+from radiology_trainer.adapters.professor import MedGemmaProfessorModel
+from radiology_trainer.adapters.xraydar import XRaydarEvidenceModel
 from radiology_trainer.config import AppConfig
 from radiology_trainer.domain import Anatomy, EvidenceBundle, StudentRead, TutorResponse
 
@@ -44,30 +46,38 @@ def build_pipeline(config: AppConfig | None = None) -> RadiologyTrainerPipeline:
 
 
 def _build_evidence_model(config: AppConfig) -> EvidenceModel:
-    if config.chest_evidence_url:
-        base_model: EvidenceModel = HTTPChestEvidenceModel(
-            url=config.chest_evidence_url,
-            timeout_seconds=config.chest_evidence_timeout_seconds,
-        )
-    else:
-        base_model = DemoChestEvidenceModel()
-        if config.model_mode != "demo":
-            # Keep this explicit until real adapters are integrated. Silent fake inference is worse.
-            base_model = DemoChestEvidenceModel(
-                name=f"demo-until-{config.chest_classifier}-adapter-is-wired"
-            )
+    if config.model_mode == "demo":
+        return DemoChestEvidenceModel()
 
-    vision_tools = []
-    if config.enable_medical_vlm:
-        vision_tools.append(MedGemmaVisionTool(model_id=config.medical_vlm))
+    base_model: EvidenceModel = XRaydarEvidenceModel(
+        backend_dir=Path(config.xraydar_backend_dir),
+        device_name=config.xraydar_device,
+        model_revision=config.xraydar_revision,
+    )
+    if not config.enable_medical_vlm:
+        return base_model
 
-    if vision_tools:
-        return HybridChestEvidenceModel(base_model=base_model, vision_tools=vision_tools)
-
-    return base_model
+    client = LlamaCppClient(
+        base_url=config.llama_base_url,
+        api_key=config.llama_api_key,
+        timeout_seconds=config.model_timeout_seconds,
+    )
+    return HybridChestEvidenceModel(
+        base_model=base_model,
+        vision_tool=MedGemmaVisionTool(
+            client=client,
+            model_id=config.localizer_model,
+            model_revision=config.localizer_revision,
+        ),
+    )
 
 
 def _build_tutor_model(config: AppConfig) -> TutorModel:
-    if config.tutor_provider in {"hf", "openai"}:
-        return NemotronTutorModel(config=config)
+    if config.tutor_provider == "llama":
+        client = LlamaCppClient(
+            base_url=config.llama_base_url,
+            api_key=config.llama_api_key,
+            timeout_seconds=config.model_timeout_seconds,
+        )
+        return MedGemmaProfessorModel(config=config, client=client)
     return DemoTutorModel()

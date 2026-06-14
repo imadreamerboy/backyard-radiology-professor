@@ -1,0 +1,330 @@
+{
+  "passed": true,
+  "app_url": "http://127.0.0.1:7860",
+  "runtime_status": {
+    "mode": "local",
+    "runtime": "llama.cpp",
+    "runtime_revision": "b8772-bafae2765",
+    "runtime_status": "ready",
+    "models": [
+      {
+        "id": "default",
+        "status": "unloaded",
+        "architecture": {}
+      },
+      {
+        "id": "medgemma-localizer",
+        "status": "loaded",
+        "architecture": {}
+      },
+      {
+        "id": "medgemma-professor",
+        "status": "unloaded",
+        "architecture": {}
+      }
+    ],
+    "model_revisions": [
+      {
+        "id": "medgemma-professor",
+        "source": "unsloth/medgemma-27b-it-GGUF",
+        "revision": "536e4d49c749bfca5aaa328bb7df3201e38e5d12",
+        "quantization": "Q4_K_M"
+      },
+      {
+        "id": "medgemma-localizer",
+        "source": "unsloth/medgemma-1.5-4b-it-GGUF",
+        "revision": "3855f948626b7ae42bccd082757f15078c53e758",
+        "quantization": "Q4_K_M"
+      }
+    ],
+    "required_models": [
+      "medgemma-professor",
+      "medgemma-localizer"
+    ],
+    "models_max": 1,
+    "queue_depth": 0,
+    "xraydar_available": true,
+    "xraydar": {
+      "source": "dnamodel/xraydar-cv",
+      "weights_revision": "34aec5a6a8d639b4ebe717f2e5a5499b8f00c493",
+      "code_revision": "f62b1a1404390bec697c6a6504f9d80193e8f93c"
+    },
+    "gpu": {
+      "name": "NVIDIA GeForce RTX 4090",
+      "memory_used_mb": 8701,
+      "memory_total_mb": 24564,
+      "utilization_percent": 29
+    },
+    "detail": ""
+  },
+  "cases": [
+    {
+      "id": "normal",
+      "passed": true,
+      "checks": {
+        "reference": true,
+        "classifier": true,
+        "vision_observations": true,
+        "bounded_regions": true,
+        "tutor_json": true,
+        "quiz": true,
+        "model_runs": true
+      },
+      "elapsed_ms": 98393,
+      "classifier_scores": {
+        "atelectasis": 0.3504062592983246,
+        "object": 0.3142843544483185,
+        "abnormal non clinically important": 0.24706675112247467,
+        "rib lesion": 0.16047024726867676,
+        "axillary abnormality": 0.15111345052719116,
+        "consolidation": 0.1462680846452713,
+        "paratracheal hilar enlargement": 0.13427390158176422,
+        "parenchymal lesion": 0.129402756690979
+      },
+      "reference_labels": [],
+      "regions": [],
+      "model_runs": [
+        {
+          "role": "classifier",
+          "model_id": "dnamodel/xraydar-cv",
+          "model_source": "dnamodel/xraydar-cv",
+          "model_revision": "34aec5a6a8d639b4ebe717f2e5a5499b8f00c493",
+          "runtime": "PyTorch",
+          "runtime_revision": "f62b1a1404390bec697c6a6504f9d80193e8f93c",
+          "status": "ok",
+          "latency_ms": 30127,
+          "time_to_first_token_ms": null,
+          "tokens_per_second": null,
+          "detail": ""
+        },
+        {
+          "role": "vision",
+          "model_id": "medgemma-localizer",
+          "model_source": "unsloth/medgemma-1.5-4b-it-GGUF",
+          "model_revision": "3855f948626b7ae42bccd082757f15078c53e758",
+          "runtime": "llama.cpp",
+          "runtime_revision": "b8772-bafae2765",
+          "status": "ok",
+          "latency_ms": 3600,
+          "time_to_first_token_ms": null,
+          "tokens_per_second": null,
+          "detail": ""
+        },
+        {
+          "role": "professor",
+          "model_id": "medgemma-professor",
+          "model_source": "unsloth/medgemma-27b-it-GGUF",
+          "model_revision": "536e4d49c749bfca5aaa328bb7df3201e38e5d12",
+          "runtime": "llama.cpp",
+          "runtime_revision": "b8772-bafae2765",
+          "status": "ok",
+          "latency_ms": 33499,
+          "time_to_first_token_ms": null,
+          "tokens_per_second": null,
+          "detail": ""
+        }
+      ],
+      "quiz": [
+        "Based on the MedGemma localization findings, what specific area(s) of the radiograph should be re-examined most closely?",
+        "What are the limitations of a standard PA chest radiograph in evaluating the lung bases?",
+        "How does the X-Raydar output inform your interpretation, even when the scores are low?"
+      ]
+    },
+    {
+      "id": "scoliosis",
+      "passed": true,
+      "checks": {
+        "reference": true,
+        "classifier": true,
+        "vision_observations": true,
+        "bounded_regions": true,
+        "tutor_json": true,
+        "quiz": true,
+        "model_runs": true
+      },
+      "elapsed_ms": 62192,
+      "classifier_scores": {
+        "scoliosis": 0.9938389658927917,
+        "mediastinum displaced": 0.3666714131832123,
+        "rib lesion": 0.2873856723308563,
+        "abnormal non clinically important": 0.2851986587047577,
+        "hyperexpanded lungs": 0.1256570816040039,
+        "object": 0.07196929305791855,
+        "axillary abnormality": 0.07137048244476318,
+        "cardiomegaly": 0.0705699548125267
+      },
+      "reference_labels": [
+        "scoliosis"
+      ],
+      "regions": [
+        {
+          "id": "3958f171a9614445a64bb2e8ea498145",
+          "image_id": "214ab0df962044d8a4a9aba4d7787e43",
+          "label": "thoracic spine showing scoliosis",
+          "x1": 0.23286052009456265,
+          "y1": 0.533,
+          "x2": 0.7671394799054374,
+          "y2": 0.747,
+          "score": null,
+          "source": "medgemma-localizer"
+        }
+      ],
+      "model_runs": [
+        {
+          "role": "classifier",
+          "model_id": "dnamodel/xraydar-cv",
+          "model_source": "dnamodel/xraydar-cv",
+          "model_revision": "34aec5a6a8d639b4ebe717f2e5a5499b8f00c493",
+          "runtime": "PyTorch",
+          "runtime_revision": "f62b1a1404390bec697c6a6504f9d80193e8f93c",
+          "status": "ok",
+          "latency_ms": 1136,
+          "time_to_first_token_ms": null,
+          "tokens_per_second": null,
+          "detail": ""
+        },
+        {
+          "role": "vision",
+          "model_id": "medgemma-localizer",
+          "model_source": "unsloth/medgemma-1.5-4b-it-GGUF",
+          "model_revision": "3855f948626b7ae42bccd082757f15078c53e758",
+          "runtime": "llama.cpp",
+          "runtime_revision": "b8772-bafae2765",
+          "status": "ok",
+          "latency_ms": 7189,
+          "time_to_first_token_ms": null,
+          "tokens_per_second": null,
+          "detail": ""
+        },
+        {
+          "role": "professor",
+          "model_id": "medgemma-professor",
+          "model_source": "unsloth/medgemma-27b-it-GGUF",
+          "model_revision": "536e4d49c749bfca5aaa328bb7df3201e38e5d12",
+          "runtime": "llama.cpp",
+          "runtime_revision": "b8772-bafae2765",
+          "status": "ok",
+          "latency_ms": 22888,
+          "time_to_first_token_ms": null,
+          "tokens_per_second": null,
+          "detail": ""
+        }
+      ],
+      "quiz": [
+        "What is the most striking finding on this radiograph?",
+        "How does scoliosis potentially affect the appearance of the mediastinum?",
+        "What other structures should be routinely assessed on a chest radiograph besides the lungs and heart?"
+      ]
+    },
+    {
+      "id": "cardiomediastinal",
+      "passed": true,
+      "checks": {
+        "reference": true,
+        "classifier": true,
+        "vision_observations": true,
+        "bounded_regions": true,
+        "tutor_json": true,
+        "quiz": true,
+        "model_runs": true
+      },
+      "elapsed_ms": 82271,
+      "classifier_scores": {
+        "tortuosity aorta": 0.9223618507385254,
+        "mediastinum widened": 0.5948531031608582,
+        "cardiomegaly": 0.45075511932373047,
+        "rib lesion": 0.3933289051055908,
+        "aortic calcification": 0.35671380162239075,
+        "abnormal non clinically important": 0.335197776556015,
+        "consolidation": 0.32947295904159546,
+        "pulmonary bloodflow redistribution": 0.314792275428772
+      },
+      "reference_labels": [
+        "cardiomegaly",
+        "mediastinum widened",
+        "unfolded aorta"
+      ],
+      "regions": [
+        {
+          "id": "3c0c3be72d074dca83aca391947c972e",
+          "image_id": "210840e28bb1498caa9f3f90742b8fb7",
+          "label": "visible aortic contour",
+          "x1": 0.333,
+          "y1": 0.540283203125,
+          "x2": 0.573,
+          "y2": 0.784423828125,
+          "score": null,
+          "source": "medgemma-localizer"
+        },
+        {
+          "id": "1a77811beaa644a188f70dff0c422979",
+          "image_id": "210840e28bb1498caa9f3f90742b8fb7",
+          "label": "widened upper mediastinum",
+          "x1": 0.263,
+          "y1": 0.540283203125,
+          "x2": 0.583,
+          "y2": 0.796630859375,
+          "score": null,
+          "source": "medgemma-localizer"
+        },
+        {
+          "id": "8cb7a1f0966a4fa8a16031371564f118",
+          "image_id": "210840e28bb1498caa9f3f90742b8fb7",
+          "label": "cardiac silhouette",
+          "x1": 0.263,
+          "y1": 0.540283203125,
+          "x2": 0.643,
+          "y2": 0.808837890625,
+          "score": null,
+          "source": "medgemma-localizer"
+        }
+      ],
+      "model_runs": [
+        {
+          "role": "classifier",
+          "model_id": "dnamodel/xraydar-cv",
+          "model_source": "dnamodel/xraydar-cv",
+          "model_revision": "34aec5a6a8d639b4ebe717f2e5a5499b8f00c493",
+          "runtime": "PyTorch",
+          "runtime_revision": "f62b1a1404390bec697c6a6504f9d80193e8f93c",
+          "status": "ok",
+          "latency_ms": 1665,
+          "time_to_first_token_ms": null,
+          "tokens_per_second": null,
+          "detail": ""
+        },
+        {
+          "role": "vision",
+          "model_id": "medgemma-localizer",
+          "model_source": "unsloth/medgemma-1.5-4b-it-GGUF",
+          "model_revision": "3855f948626b7ae42bccd082757f15078c53e758",
+          "runtime": "llama.cpp",
+          "runtime_revision": "b8772-bafae2765",
+          "status": "ok",
+          "latency_ms": 11455,
+          "time_to_first_token_ms": null,
+          "tokens_per_second": null,
+          "detail": ""
+        },
+        {
+          "role": "professor",
+          "model_id": "medgemma-professor",
+          "model_source": "unsloth/medgemma-27b-it-GGUF",
+          "model_revision": "536e4d49c749bfca5aaa328bb7df3201e38e5d12",
+          "runtime": "llama.cpp",
+          "runtime_revision": "b8772-bafae2765",
+          "status": "ok",
+          "latency_ms": 29535,
+          "time_to_first_token_ms": null,
+          "tokens_per_second": null,
+          "detail": ""
+        }
+      ],
+      "quiz": [
+        "What are the key components contributing to the appearance of a 'widened mediastinum' on a chest radiograph?",
+        "How does an 'unfolded aorta' affect the appearance of the mediastinum and cardiac silhouette?",
+        "What are some potential causes of cardiomegaly?"
+      ]
+    }
+  ]
+}

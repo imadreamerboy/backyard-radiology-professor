@@ -1,40 +1,22 @@
-# Model Integration Plan
+# Model integration
 
-The app is built around stable internal contracts, not one monolithic model call.
+One llama.cpp router serves two aliases through `http://127.0.0.1:8080/v1/chat/completions`:
 
-## Current MVP
+- `medgemma-professor`: MedGemma 27B Q4_K_M, 8K context, full GPU offload.
+- `medgemma-localizer`: MedGemma 1.5 4B Q4_K_M, 4K context.
 
-- `DemoChestEvidenceModel`: deterministic, demo-safe evidence for UI and flow testing.
-- `HTTPChestEvidenceModel`: production app path for a real local evidence service.
-- `NemotronTutorModel`: active tutor adapter for Hugging Face or OpenAI-compatible endpoints such as vLLM.
-- `EvidenceBundle`: shared contract for classifiers, localizers, retrieval tools, VLM notes, and segmentation outputs.
+`runtime/models.local-wsl.ini` is the local desktop profile: 6K context and full
+GPU offload. Docker Compose selects
+that profile through `RAD_TRAINER_LLAMA_PRESET`; the Space uses
+`runtime/models.ini`.
 
-## Intended Local Stack
+The router runs with `--models-max 1`. The application explicitly unloads the inactive model before loading the next one.
 
-1. **X-Raydar**
-   - Role: frontal chest finding probabilities.
-   - Model: `dnamodel/xraydar-cv`.
-   - Notes: non-commercial/research terms; use `scripts/download_xraydar_backend.py`, then run `scripts/run_xraydar_service.py` and point `RAD_TRAINER_CHEST_EVIDENCE_URL` at it.
+Inference order:
 
-2. **MedSigLIP or CXR Foundation**
-   - Role: anatomy routing, zero-shot labels, retrieval, out-of-distribution checks.
-   - Notes: use before calling chest-specific tools so later body-part pipelines can be added cleanly.
+1. X-Raydar classifies the primary PA/AP image, then returns its models to CPU.
+2. MedGemma 1.5 4B generates structured observations and bounding boxes.
+3. The localizer unloads and MedGemma 27B loads.
+4. MedGemma 27B produces a structured professor review and remains available for streamed chat.
 
-3. **MedGemma 1.5 4B**
-   - Role: image-conditioned medical explanation and bounding-box/anatomical localization.
-   - Model: `google/medgemma-1.5-4b-it`.
-   - Notes: gated/terms-governed; should be a medical VLM tool, not the only perceptual source.
-
-4. **Nemotron 3 Nano**
-   - Role: main tutor/orchestrator, blind-read critique, uncertainty handling, quiz generation.
-   - Default model: `nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16`.
-   - Local verification model: `nvidia/NVIDIA-Nemotron-3-Nano-4B-FP8` served by vLLM as `nemotron3-nano-4B-FP8`.
-   - Notes: run via vLLM/SGLang/OpenAI-compatible endpoint for local compute, or HF provider if available.
-
-5. **SAM 3.1**
-   - Role: interactive region refinement after classifier/VLM evidence proposes a target.
-   - Notes: not a diagnostic model; use it for overlays and user-driven segmentation.
-
-## Extension Pattern
-
-Add a new anatomy by implementing an evidence adapter that returns `EvidenceBundle`, then register it behind the anatomy router. The UI and tutor layer should not need anatomy-specific changes.
+Every accepted model output records model identity, runtime, status, and latency. Chat additionally records time to first token and throughput when llama.cpp reports token usage. Invalid structured localizer output is retained as an explicit failed model run.
