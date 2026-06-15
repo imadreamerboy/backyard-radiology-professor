@@ -1,11 +1,18 @@
 # Deploy the Space
 
-1. Create a Docker Space with one Nvidia L4.
+1. Create a Docker Space in `build-small-hackathon/backyard-radiology-professor`.
 2. Accept the MedGemma license for the account behind the token.
 3. Add `HF_TOKEN` as a Space secret.
 4. Push this repository unchanged.
 
-Startup downloads the exact GGUF revisions in `scripts/prepare_runtime.py`, prepares X-Raydar, starts the pinned CUDA llama.cpp router on port 8080, verifies both model presets, and serves Gradio on port 7860.
+When Hugging Face GPU billing is available, startup downloads the exact GGUF
+revisions in `scripts/prepare_runtime.py`, prepares X-Raydar, starts the pinned
+CUDA llama.cpp router on port 8080, verifies both model presets, and serves
+Gradio on port 7860.
+
+When the official org cannot allocate paid GPU hardware, deploy the real backend
+on Modal and set `RAD_TRAINER_REMOTE_BACKEND_URL` on the Space. In that mode the
+Space serves the same Gradio workstation and proxies `/api/*` to Modal.
 
 Required router aliases:
 

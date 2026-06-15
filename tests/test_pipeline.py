@@ -161,3 +161,27 @@ def test_professor_context_includes_study_metadata() -> None:
     assert '"study"' in context
     assert '"modality": "DX"' in context
     assert '"xraydar_findings"' in context
+
+
+def test_server_proxy_mode_forwards_api(monkeypatch) -> None:
+    class FakeResponse:
+        status_code = 200
+        headers = {"content-type": "application/json"}
+        content = b'{"runtime_status":"ready"}'
+
+        def close(self) -> None:
+            pass
+
+    calls = []
+
+    def fake_request(method, url, **kwargs):
+        calls.append((method, url, kwargs))
+        return FakeResponse()
+
+    monkeypatch.setattr("radiology_trainer.remote_proxy.requests.request", fake_request)
+    client = TestClient(create_server(AppConfig(remote_backend_url="https://modal.example")))
+    response = client.get("/api/status")
+    assert response.status_code == 200
+    assert response.json()["runtime_status"] == "ready"
+    assert calls[0][0] == "GET"
+    assert calls[0][1] == "https://modal.example/api/status"

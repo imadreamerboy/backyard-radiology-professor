@@ -10,6 +10,10 @@ if [ -d /data ]; then
   export HUGGINGFACE_HUB_CACHE=/data/backyard-radiology-professor/hf-cache/hub
 fi
 
+if [ -n "${RAD_TRAINER_REMOTE_BACKEND_URL:-}" ]; then
+  exec uv run --no-sync python app.py
+fi
+
 uv run --no-sync python scripts/prepare_runtime.py
 
 llama-server \

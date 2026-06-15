@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Iterator
 
 import gradio as gr
-from fastapi import File, Form, HTTPException, UploadFile
+from fastapi import File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 from radiology_trainer.adapters.llama_client import LlamaCppClient
 from radiology_trainer.cases import demo_cases
 from radiology_trainer.config import AppConfig
+from radiology_trainer.remote_proxy import RemoteBackendProxy
 from radiology_trainer.runtime_manifest import (
     LLAMA_CPP_BUILD,
     LOCALIZER_QUANTIZATION,
@@ -49,6 +50,9 @@ class FeedbackRequest(BaseModel):
 
 def create_server(config: AppConfig | None = None) -> gr.Server:
     cfg = config or AppConfig.from_env()
+    if cfg.remote_backend_url:
+        return _create_proxy_server(cfg)
+
     service = TrainerService(cfg)
     server = gr.Server(
         title="Backyard Radiology Professor",
@@ -275,6 +279,30 @@ def create_server(config: AppConfig | None = None) -> gr.Server:
     @server.api(name="runtime_status", queue=False)
     def runtime_status() -> str:
         return f"{cfg.model_mode}: llama.cpp + MedGemma + X-Raydar"
+
+    return server
+
+
+def _create_proxy_server(config: AppConfig) -> gr.Server:
+    proxy = RemoteBackendProxy(
+        config.remote_backend_url,
+        timeout_seconds=config.model_timeout_seconds,
+    )
+    server = gr.Server(
+        title="Backyard Radiology Professor",
+        description="Educational chest radiograph practice workstation",
+        docs_url=None,
+        redoc_url=None,
+    )
+    server.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+    @server.get("/", include_in_schema=False)
+    def index() -> FileResponse:
+        return FileResponse(STATIC_DIR / "index.html")
+
+    @server.api_route("/api/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
+    async def api_proxy(path: str, request: Request) -> Response:
+        return await proxy.forward(path, request)
 
     return server
 

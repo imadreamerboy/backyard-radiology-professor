@@ -57,7 +57,11 @@ uv run python scripts/benchmark_runtime.py
 ```
 
 Verified local and deployed results are stored under `artifacts/validation/`.
-The public demo is complete only after the same real-backend suite passes against the deployed Space. L4 is the target; if the measured profile exceeds 22 GB, reduce professor context to 6K and partially offload layers. If warm performance remains below 5 tokens/s or first token exceeds 20 seconds, use L40S without changing model quality.
+The public demo is complete only after the same real-backend suite passes against
+the deployed Space. If the official Build Small org cannot allocate paid GPU
+hardware, run the real backend on Modal and use the official Hugging Face Space
+as the public Gradio proxy. See
+[docs/deploy_modal_backend.md](docs/deploy_modal_backend.md).
 
 ## Supported studies
 

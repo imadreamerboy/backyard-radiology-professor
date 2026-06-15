@@ -37,6 +37,9 @@ dev = [
     "pytest>=8.2",
     "ruff>=0.5",
 ]
+deploy = [
+    "modal>=1.5.0",
+]
 
 [tool.uv]
 package = true
