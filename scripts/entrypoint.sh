@@ -4,10 +4,12 @@ set -euo pipefail
 if [ -d /data ]; then
   mkdir -p /data/backyard-radiology-professor/outputs
   mkdir -p /data/backyard-radiology-professor/hf-cache
+  mkdir -p /data/backyard-radiology-professor/sessions
   rm -rf outputs
   ln -s /data/backyard-radiology-professor/outputs outputs
   export HF_HOME=/data/backyard-radiology-professor/hf-cache
   export HUGGINGFACE_HUB_CACHE=/data/backyard-radiology-professor/hf-cache/hub
+  export RAD_TRAINER_SESSION_STORE_DIR=/data/backyard-radiology-professor/sessions
 fi
 
 if [ -n "${RAD_TRAINER_REMOTE_BACKEND_URL:-}" ]; then
@@ -21,7 +23,7 @@ llama-server \
   --host 127.0.0.1 \
   --port 8080 \
   --metrics \
-  --models-max 1 \
+  --models-max 2 \
   --api-key "${RAD_TRAINER_LLAMA_API_KEY:-local}" \
   > outputs/llama-router.log 2>&1 &
 LLAMA_PID=$!

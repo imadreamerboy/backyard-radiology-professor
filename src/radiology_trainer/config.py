@@ -30,6 +30,7 @@ class AppConfig:
     xraydar_device: str = "cuda"
     enable_medical_vlm: bool = False
     session_ttl_minutes: int = 120
+    session_store_dir: str = ""
     max_upload_mb: int = 200
     max_study_files: int = 32
     max_study_uncompressed_mb: int = 500
@@ -83,6 +84,7 @@ class AppConfig:
             .lower()
             in {"1", "true", "yes", "on"},
             session_ttl_minutes=int(os.getenv("RAD_TRAINER_SESSION_TTL_MINUTES", "120")),
+            session_store_dir=os.getenv("RAD_TRAINER_SESSION_STORE_DIR", "").strip(),
             max_upload_mb=int(os.getenv("RAD_TRAINER_MAX_UPLOAD_MB", "200")),
             max_study_files=int(os.getenv("RAD_TRAINER_MAX_STUDY_FILES", "32")),
             max_study_uncompressed_mb=int(

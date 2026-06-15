@@ -208,7 +208,7 @@ def create_server(config: AppConfig | None = None) -> gr.Server:
                 },
             ],
             "required_models": required,
-            "models_max": 1,
+            "models_max": 2,
             "queue_depth": service.queue_depth,
             "xraydar_available": (
                 cfg.model_mode == "demo" or Path(cfg.xraydar_backend_dir).exists()
@@ -345,7 +345,7 @@ def _on_demand_status(config: AppConfig) -> dict[str, Any]:
             },
         ],
         "required_models": [config.professor_model, config.localizer_model],
-        "models_max": 1,
+        "models_max": 2,
         "queue_depth": 0,
         "xraydar_available": True,
         "xraydar": {

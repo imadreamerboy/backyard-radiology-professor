@@ -24,13 +24,15 @@ uv run playwright install chromium
 ## Record the browser workflow
 
 ```bash
-uv run python scripts/record_demo.py --headed
+uv run python scripts/record_demo.py --headed --step-pause-ms 2200
 ```
 
 The script records a 1440x900 walkthrough under `artifacts/video/`. It opens the
 tutorial, selects the scoliosis case, commits a blind read, shows evidence, and
-asks the professor a grounded question. It waits for the real backend rather
-than substituting demo output. If `ffmpeg` is installed, it also creates an MP4.
+asks the professor a grounded question. It shows a cursor overlay and leaves
+short pauses between steps so the capture is readable. It waits for the real
+backend rather than substituting demo output. If `ffmpeg` is installed, it also
+creates an MP4.
 
 ## Suggested two-minute narration
 

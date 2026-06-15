@@ -53,10 +53,10 @@ The three included cases are public educational examples. Uploaded studies shoul
 - `unsloth/medgemma-27b-it-GGUF` Q4_K_M + F16 projector: professor review and multi-turn chat.
 - `unsloth/medgemma-1.5-4b-it-GGUF` Q4_K_M + F16 projector: observations and bounding boxes.
 - X-Raydar: independent three-model chest radiograph classifier.
-- One pinned CUDA llama.cpp router with `--models-max 1`.
+- One pinned CUDA llama.cpp router with both MedGemma aliases loaded.
 - Python dependencies and commands are managed with `uv`.
 
-Only one MedGemma model is resident at a time. X-Raydar moves back to CPU after inference, the 4B localizer unloads, and the 27B professor then loads for chat.
+The public backend targets an L40S profile so the 4B localizer and 27B professor stay resident. Session state is persisted on the backend volume so chat can resume after the GPU container idles down and wakes again.
 
 ## Run
 

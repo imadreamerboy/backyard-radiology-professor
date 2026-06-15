@@ -15,6 +15,7 @@ def format_session_note(
     )
     next_steps = "\n".join(f"- {step}" for step in scorecard.next_steps)
     quiz = "\n".join(f"{idx + 1}. {item}" for idx, item in enumerate(tutor.quiz))
+    professor_review = format_professor_review(tutor)
 
     return f"""
 ## Session note
@@ -39,6 +40,10 @@ def format_session_note(
 
 {next_steps}
 
+**Professor review**
+
+{professor_review}
+
 **Quiz**
 
 {quiz}
@@ -47,3 +52,23 @@ def format_session_note(
 
 Educational practice only. Verify all findings manually and do not use this output for clinical decisions.
 """
+
+
+def format_professor_review(tutor: TutorResponse) -> str:
+    model_evidence = "\n".join(f"- {item}" for item in tutor.model_evidence)
+    reading_approach = "\n".join(f"- {item}" for item in tutor.reading_approach)
+    uncertainty = "\n".join(f"- {item}" for item in tutor.uncertainty)
+    return f"""### What you said
+{tutor.student_read_assessment}
+
+### What the models suggest
+{model_evidence}
+
+### Professor assessment
+{tutor.professor_assessment}
+
+### How to read it
+{reading_approach}
+
+### Uncertainty
+{uncertainty}"""

@@ -25,7 +25,7 @@ image = modal.Image.from_dockerfile("Dockerfile.modal", context_dir=".")
 
 @app.function(
     image=image,
-    gpu=["L40S", "L4"],
+    gpu="L40S",
     volumes={"/data": cache_volume},
     secrets=[_hf_secret()],
     timeout=2 * 60 * 60,

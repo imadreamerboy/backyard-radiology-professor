@@ -18,6 +18,11 @@ const state = {
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
+const TOOL_LABELS = {
+  pan: "Pan tool",
+  window: "Window/level drag",
+  ruler: "Ruler tool",
+};
 
 document.addEventListener("DOMContentLoaded", async () => {
   applySavedTheme();
@@ -25,6 +30,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   await Promise.all([loadCases(), loadRuntimeStatus()]);
   refreshIcons();
   updateProgress();
+  updateViewerControls();
   if (!localStorage.getItem("radiology-onboarding-complete")) openOnboarding();
 });
 
@@ -294,9 +300,13 @@ function renderViewport(slot, imageId, canvas, label) {
   visibleRegions(imageId).forEach((region) => drawRegion(ctx, canvas, region));
   drawRuler(ctx, canvas, viewState(imageId).ruler, image);
   const view = viewState(imageId);
-  canvas.style.transform = `translate(${view.panX}px, ${view.panY}px) scale(${view.flipX ? -view.zoom : view.zoom}, ${view.zoom}) rotate(${view.rotation}deg)`;
+  applyViewTransform(canvas, view);
   canvas.style.display = "block";
   label.textContent = `${image.projection || "Image"} · ${slot === "primary" ? "Active" : "Comparison"}`;
+}
+
+function applyViewTransform(canvas, view) {
+  canvas.style.transform = `translate(${view.panX}px, ${view.panY}px) scale(${view.flipX ? -view.zoom : view.zoom}, ${view.zoom}) rotate(${view.rotation}deg)`;
 }
 
 function visibleRegions(imageId) {
@@ -354,6 +364,15 @@ function measurementText(ruler, image) {
 function bindViewport(canvas, slot) {
   const viewport = canvas.closest(".viewport");
   let drag = null;
+  let suppressClick = false;
+  const finishDrag = () => {
+    if (!drag) return;
+    const wasWindowing = drag.windowing;
+    suppressClick = suppressClick || drag.moved || wasWindowing || drag.ruler;
+    drag = null;
+    viewport.classList.remove("dragging");
+    if (wasWindowing) scheduleWindowRender(true);
+  };
   viewport.addEventListener("pointerdown", (event) => {
     const imageId = slot === "primary" ? state.activeImageId : state.secondaryImageId;
     if (!imageId || !state.images.has(imageId)) return;
@@ -366,18 +385,20 @@ function bindViewport(canvas, slot) {
     }
     const view = viewState(imageId);
     const point = normalizedPoint(event, canvas);
-    if (state.tool === "pan") drag = { x: event.clientX - view.panX, y: event.clientY - view.panY };
-    if (state.tool === "window") drag = { x: event.clientX, y: event.clientY, center: view.center, width: view.width };
+    if (state.tool === "pan") drag = { x: event.clientX - view.panX, y: event.clientY - view.panY, moved: false };
+    if (state.tool === "window") drag = { x: event.clientX, y: event.clientY, center: view.center, width: view.width, windowing: true, moved: false };
     if (state.tool === "ruler") {
       view.ruler = { x1: point.x, y1: point.y, x2: point.x, y2: point.y };
-      drag = { ruler: true };
+      drag = { ruler: true, moved: false };
       renderAllViewports();
     }
+    viewport.classList.add("dragging");
     viewport.setPointerCapture(event.pointerId);
   });
   viewport.addEventListener("pointermove", (event) => {
     if (!drag || !state.activeImageId) return;
     const view = activeViewState();
+    drag.moved = drag.moved || Math.abs(event.movementX) + Math.abs(event.movementY) > 2;
     if (drag.ruler) {
       const point = normalizedPoint(event, canvas);
       view.ruler.x2 = point.x;
@@ -386,25 +407,46 @@ function bindViewport(canvas, slot) {
     } else if (state.tool === "pan") {
       view.panX = event.clientX - drag.x;
       view.panY = event.clientY - drag.y;
-      renderAllViewports();
+      applyViewTransform(canvas, view);
     } else if (state.tool === "window") {
       const sensitivity = Math.max(Math.abs(drag.width), 1) / 300;
       view.width = Math.max(1, drag.width + (event.clientX - drag.x) * sensitivity * 2);
       view.center = drag.center - (event.clientY - drag.y) * sensitivity;
       view.preset = "custom";
       updateViewerControls();
-      scheduleWindowRender();
+      previewWindowLevel(canvas, drag, view);
     }
   });
   viewport.addEventListener("pointerup", (event) => {
-    if (!drag) {
+    if (!drag && !suppressClick) {
       selectRegionAt(event, canvas);
       return;
     }
-    drag = null;
-    if (state.tool === "window") scheduleWindowRender(true);
+    finishDrag();
   });
-  canvas.addEventListener("click", (event) => selectRegionAt(event, canvas));
+  viewport.addEventListener("pointercancel", finishDrag);
+  viewport.addEventListener("lostpointercapture", finishDrag);
+  viewport.addEventListener("wheel", (event) => {
+    if (!state.activeImageId || slot !== "primary") return;
+    event.preventDefault();
+    changeZoom(event.deltaY < 0 ? 0.12 : -0.12);
+  }, { passive: false });
+  viewport.addEventListener("dblclick", () => {
+    if (slot === "primary") fitView();
+  });
+  canvas.addEventListener("click", (event) => {
+    if (suppressClick) {
+      suppressClick = false;
+      return;
+    }
+    selectRegionAt(event, canvas);
+  });
+}
+
+function previewWindowLevel(canvas, baseline, view) {
+  const contrast = clamp(baseline.width / Math.max(view.width, 1), 0.35, 3);
+  const brightness = clamp(1 + (baseline.center - view.center) / Math.max(baseline.width, 1), 0.45, 1.7);
+  canvas.style.filter = `contrast(${contrast}) brightness(${brightness})`;
 }
 
 function normalizedPoint(event, canvas) {
@@ -431,20 +473,29 @@ function selectRegionAt(event, canvas) {
 function setLayout(layout) {
   if (layout === "two-up" && (state.session?.study.images.length || 0) < 2) return;
   state.layout = layout;
-  $$("[data-layout]").forEach((button) => button.classList.toggle("active", button.dataset.layout === layout));
+  $$("[data-layout]").forEach((button) => {
+    const active = button.dataset.layout === layout;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
   $("#viewer-grid").className = `viewer-grid ${layout}`;
   $('.viewport[data-viewport="secondary"]').classList.toggle("hidden", layout !== "two-up");
   loadVisibleImages().catch((error) => showError(error.message));
 }
 
 function setTool(tool) {
+  if (!state.activeImageId) return;
   state.tool = tool;
-  $$("[data-tool]").forEach((button) => button.classList.toggle("active", button.dataset.tool === tool));
+  $$("[data-tool]").forEach((button) => {
+    const active = button.dataset.tool === tool;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
   $$(".viewport").forEach((viewport) => {
     viewport.classList.toggle("windowing", tool === "window");
     viewport.classList.toggle("measuring", tool === "ruler");
   });
-  $("#active-tool").textContent = `${tool[0].toUpperCase()}${tool.slice(1)} tool`;
+  $("#active-tool").textContent = TOOL_LABELS[tool] || `${tool[0].toUpperCase()}${tool.slice(1)} tool`;
 }
 
 function applyWindowPreset() {
@@ -467,6 +518,9 @@ function scheduleWindowRender(immediate = false) {
       renderAllViewports();
     } catch (error) {
       showError(error.message);
+    } finally {
+      $("#primary-canvas").style.filter = "";
+      $("#secondary-canvas").style.filter = "";
     }
   }, immediate ? 0 : 120);
 }
@@ -476,28 +530,28 @@ function changeZoom(delta) {
   if (!view) return;
   view.zoom = clamp(view.zoom + delta, 0.35, 4);
   updateViewerControls();
-  renderAllViewports();
+  applyViewTransform($("#primary-canvas"), view);
 }
 
 function fitView() {
   const view = activeViewState();
   if (!view) return;
   view.zoom = 1; view.panX = 0; view.panY = 0;
-  updateViewerControls(); renderAllViewports();
+  updateViewerControls(); applyViewTransform($("#primary-canvas"), view);
 }
 
 function rotateView() {
   const view = activeViewState();
   if (!view) return;
   view.rotation = (view.rotation + 90) % 360;
-  renderAllViewports();
+  applyViewTransform($("#primary-canvas"), view);
 }
 
 function flipView() {
   const view = activeViewState();
   if (!view) return;
   view.flipX = !view.flipX;
-  renderAllViewports();
+  applyViewTransform($("#primary-canvas"), view);
 }
 
 function invertView() {
@@ -518,6 +572,15 @@ function resetActiveView() {
 function updateViewerControls() {
   const image = imageById(state.activeImageId);
   const view = image ? viewState(image.id) : null;
+  const imageLoaded = Boolean(image);
+  $$("[data-tool]").forEach((button) => { button.disabled = !imageLoaded; });
+  $$("[data-layout]").forEach((button) => {
+    button.disabled = button.dataset.layout === "two-up"
+      ? (state.session?.study.images.length || 0) < 2
+      : !imageLoaded;
+  });
+  ["fit-view", "zoom-out", "zoom-in", "rotate-view", "flip-view", "invert-view", "reset-view", "metadata-button"]
+    .forEach((id) => { $(`#${id}`).disabled = !imageLoaded; });
   $("#window-preset").disabled = !image;
   $("#window-preset").innerHTML = image
     ? [...image.window_presets.map((item) => `<option value="${item.id}">${escapeHtml(item.label)}</option>`), '<option value="custom">Custom</option>'].join("")
@@ -528,6 +591,7 @@ function updateViewerControls() {
   $("#window-center").textContent = view ? formatNumber(view.center) : "--";
   $("#image-dimensions").textContent = image ? `${image.width} × ${image.height}` : "--";
   $("#measurement-value").textContent = view?.ruler ? measurementText(view.ruler, image) : "--";
+  if (!imageLoaded) $("#active-tool").textContent = "--";
 }
 
 async function runAnalysis() {
@@ -617,9 +681,20 @@ function renderEvidence() {
     </div>
     <div class="evidence-row"><strong>Overall blind-read score</strong><span class="numeric-label"><strong class="score-value">${scorecard.total_score}</strong><button class="info-tip" data-tip="Educational heuristic combining finding coverage, read technique, and uncertainty wording. Not a clinical competency score." aria-label="Explain total score">?</button></span><p>${escapeHtml(scorecard.practice_focus)}</p></div>
     ${reference ? `<div class="reference-block"><span>PUBLIC CASE REFERENCE</span><strong>${escapeHtml(labels)}</strong><p>${escapeHtml(reference.teaching_point)} Source: ${escapeHtml(reference.source)}.</p></div>` : ""}
-    <div class="evidence-row"><strong>Professor summary</strong><p>${escapeHtml(tutor.summary)}</p>${modelRunHtml(tutor.model_run)}</div>
+    <div class="professor-review">
+      ${reviewSection("What you said", [tutor.student_read_assessment])}
+      ${reviewSection("What the models suggest", tutor.model_evidence)}
+      ${reviewSection("Professor assessment", [tutor.professor_assessment])}
+      ${reviewSection("How to read it", tutor.reading_approach)}
+      ${reviewSection("Uncertainty", tutor.uncertainty)}
+    </div>
+    ${modelRunHtml(tutor.model_run)}
   `;
   refreshIcons();
+}
+
+function reviewSection(label, items) {
+  return `<section class="review-section"><span>${escapeHtml(label)}</span>${(items || []).map((item) => `<p>${escapeHtml(item)}</p>`).join("")}</section>`;
 }
 
 function scoreCell(label, value, tip) {
@@ -704,9 +779,22 @@ function messageHtml(message, streaming = false) {
   const chips = (message.evidence_sources || []).map((item) => `<span class="evidence-chip">${escapeHtml(item)}</span>`).join("");
   return `<div class="message ${message.role}" ${streaming ? 'id="streaming-message"' : ""}>
     <div class="message-role"><span>${message.role === "assistant" ? "Professor" : "You"}</span><span>${streaming ? "Generating" : ""}</span></div>
-    <div class="message-body">${escapeHtml(message.content)}</div>
+    <div class="message-body">${formatMessageContent(message.content)}</div>
     <div class="message-meta">${metrics}${chips}</div>
   </div>`;
+}
+
+function formatMessageContent(value) {
+  const inline = (text) => escapeHtml(text).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  return String(value || "").split(/\r?\n/).map((line) => {
+    const heading = line.match(/^#{1,3}\s+(.+)$/);
+    if (heading) return `<strong class="message-section-title">${inline(heading[1])}</strong>`;
+    const bullet = line.match(/^[-*]\s+(.+)$/);
+    if (bullet) return `<span class="message-list-item">${inline(bullet[1])}</span>`;
+    const numbered = line.match(/^\d+\.\s+(.+)$/);
+    if (numbered) return `<span class="message-list-item numbered">${inline(numbered[1])}</span>`;
+    return line ? `<span class="message-line">${inline(line)}</span>` : '<span class="message-spacer"></span>';
+  }).join("");
 }
 
 async function sendChat() {

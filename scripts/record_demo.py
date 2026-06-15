@@ -5,7 +5,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import Locator, Page, sync_playwright
 
 
 def main() -> None:
@@ -24,39 +24,42 @@ def main() -> None:
         )
         page = context.new_page()
         page.goto(args.app_url, wait_until="domcontentloaded", timeout=args.timeout_ms)
+        if args.show_cursor:
+            _install_cursor(page)
         page.locator("#case-list .case-item").first.wait_for(timeout=args.timeout_ms)
 
         tutorial_steps = page.locator(".walkthrough-step").count()
         for _ in range(tutorial_steps):
-            page.wait_for_timeout(1100)
-            page.locator("#walkthrough-next").click()
+            _pause(page, args.step_pause_ms)
+            _click(page, page.locator("#walkthrough-next"))
 
-        page.wait_for_timeout(800)
-        page.locator('[data-case="scoliosis"]').click()
+        _pause(page, args.step_pause_ms)
+        _click(page, page.locator('[data-case="scoliosis"]'))
         page.locator("#primary-canvas").wait_for(state="visible", timeout=args.timeout_ms)
-        page.wait_for_timeout(1800)
+        _pause(page, args.step_pause_ms)
 
+        _click(page, page.locator("#blind-read"))
         page.locator("#blind-read").fill(
             "PA chest radiograph. No focal airspace opacity. "
             "There may be mild thoracic spinal curvature."
         )
-        page.wait_for_timeout(1000)
-        page.locator("#commit-read").click()
+        _pause(page, args.step_pause_ms)
+        _click(page, page.locator("#commit-read"))
         page.locator("#evidence-content").wait_for(state="visible", timeout=args.timeout_ms)
-        page.wait_for_timeout(2200)
+        _pause(page, args.step_pause_ms + 1200)
 
-        page.locator('[data-panel="evidence"]').click()
-        page.wait_for_timeout(2500)
-        page.locator('[data-panel="chat"]').click()
-        page.wait_for_timeout(1800)
+        _click(page, page.locator('[data-panel="evidence"]'))
+        _pause(page, args.step_pause_ms + 1200)
+        _click(page, page.locator('[data-panel="chat"]'))
+        _pause(page, args.step_pause_ms)
         page.locator("#chat-input").fill("Explain the most important teaching point.")
-        page.locator("#chat-send").click()
+        _click(page, page.locator("#chat-send"))
         page.wait_for_function(
             "() => document.querySelector('#professor-state')?.textContent === "
             "'Grounded in this session'",
             timeout=args.timeout_ms,
         )
-        page.wait_for_timeout(3000)
+        _pause(page, args.step_pause_ms + 1800)
 
         video = page.video
         context.close()
@@ -67,6 +70,58 @@ def main() -> None:
 
     _convert_to_mp4(webm_path, args.output_dir)
     print(webm_path)
+
+
+def _install_cursor(page: Page) -> None:
+    page.add_style_tag(
+        content="""
+        .recording-cursor {
+          position: fixed;
+          z-index: 2147483647;
+          width: 18px;
+          height: 18px;
+          border: 2px solid #55d4d1;
+          border-radius: 999px;
+          box-shadow: 0 0 0 3px rgba(85, 212, 209, .18);
+          pointer-events: none;
+          transform: translate(-50%, -50%);
+          transition: width .12s ease, height .12s ease, background .12s ease;
+        }
+        .recording-cursor.down {
+          width: 28px;
+          height: 28px;
+          background: rgba(85, 212, 209, .22);
+        }
+        """
+    )
+    page.evaluate(
+        """
+        () => {
+          const cursor = document.createElement('div');
+          cursor.className = 'recording-cursor';
+          document.body.appendChild(cursor);
+          window.addEventListener('mousemove', (event) => {
+            cursor.style.left = `${event.clientX}px`;
+            cursor.style.top = `${event.clientY}px`;
+          }, { passive: true });
+          window.addEventListener('mousedown', () => cursor.classList.add('down'), { passive: true });
+          window.addEventListener('mouseup', () => cursor.classList.remove('down'), { passive: true });
+        }
+        """
+    )
+
+
+def _click(page: Page, locator: Locator) -> None:
+    locator.wait_for(state="visible")
+    box = locator.bounding_box()
+    if box:
+        page.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2, steps=18)
+        page.wait_for_timeout(350)
+    locator.click()
+
+
+def _pause(page: Page, milliseconds: int) -> None:
+    page.wait_for_timeout(milliseconds)
 
 
 def _convert_to_mp4(webm_path: Path, output_dir: Path) -> None:
@@ -100,6 +155,8 @@ def _parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--output-dir", type=Path, default=Path("artifacts/video"))
     parser.add_argument("--timeout-ms", type=int, default=15 * 60 * 1000)
+    parser.add_argument("--step-pause-ms", type=int, default=1800)
+    parser.add_argument("--show-cursor", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--headed", action="store_true")
     return parser.parse_args()
 

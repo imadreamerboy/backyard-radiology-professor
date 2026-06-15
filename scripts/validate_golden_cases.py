@@ -92,16 +92,18 @@ def _run_case(args: argparse.Namespace, case: dict[str, Any]) -> dict[str, Any]:
     ]
     runs = [run for run in runs if run]
     regions = result["evidence"]["regions"]
+    tutor = result["tutor"]
     checks = {
         "reference": reference == case["expected_reference"],
         "classifier": _classifier_matches(case["id"], findings, case),
         "vision_observations": bool(result["evidence"]["observations"]),
         "bounded_regions": all(_valid_box(box) for box in regions)
         and (case["id"] == "normal" or bool(regions)),
-        "tutor_json": bool(result["tutor"]["summary"])
-        and bool(result["tutor"]["feedback"])
-        and bool(result["tutor"]["suggested_checks"]),
-        "quiz": bool(result["tutor"]["quiz"]),
+        "tutor_json": bool(tutor["student_read_assessment"])
+        and bool(tutor["model_evidence"])
+        and bool(tutor["professor_assessment"])
+        and bool(tutor["reading_approach"]),
+        "quiz": bool(tutor["quiz"]),
         "model_runs": len(runs) == 3
         and all(run.get("status") == "ok" for run in runs),
     }
@@ -116,7 +118,7 @@ def _run_case(args: argparse.Namespace, case: dict[str, Any]) -> dict[str, Any]:
         "reference_labels": sorted(reference),
         "regions": regions,
         "model_runs": runs,
-        "quiz": result["tutor"]["quiz"],
+        "quiz": tutor["quiz"],
     }
 
 

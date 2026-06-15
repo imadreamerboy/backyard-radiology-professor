@@ -17,7 +17,7 @@ def main() -> None:
         str(args.port),
         "--metrics",
         "--models-max",
-        "1",
+        "2",
         "--api-key",
         args.api_key,
     ]

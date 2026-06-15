@@ -54,13 +54,13 @@
         </div>
         <div class="toolbar-clusters">
           <div class="segmented" aria-label="Viewer layout">
-            <button class="segment active" data-layout="single" title="Single image"><i data-lucide="square"></i></button>
-            <button class="segment" data-layout="two-up" title="Two-up comparison"><i data-lucide="columns-2"></i></button>
+            <button class="segment active" data-layout="single" title="Single image" aria-label="Single image layout" aria-pressed="true"><i data-lucide="square"></i></button>
+            <button class="segment" data-layout="two-up" title="Compare two study images" aria-label="Two-up comparison layout" aria-pressed="false"><i data-lucide="columns-2"></i></button>
           </div>
           <div class="segmented" aria-label="Viewer tool">
-            <button class="segment active" data-tool="pan" title="Pan"><i data-lucide="hand"></i></button>
-            <button class="segment" data-tool="window" title="Window and level"><i data-lucide="sliders-horizontal"></i></button>
-            <button class="segment" data-tool="ruler" title="Measure"><i data-lucide="ruler"></i></button>
+            <button class="segment active" data-tool="pan" title="Pan image" aria-label="Pan image" aria-pressed="true"><i data-lucide="hand"></i></button>
+            <button class="segment" data-tool="window" title="Drag horizontally for width and vertically for level" aria-label="Window and level" aria-pressed="false"><i data-lucide="sliders-horizontal"></i></button>
+            <button class="segment" data-tool="ruler" title="Measure distance" aria-label="Measure distance" aria-pressed="false"><i data-lucide="ruler"></i></button>
           </div>
           <select id="window-preset" title="Window preset" aria-label="Window preset" disabled>
             <option>Original</option>
@@ -127,9 +127,7 @@
       <section class="inspector-panel" id="panel-evidence">
         <div class="analysis-progress hidden" id="analysis-progress">
           <div class="progress-row" data-stage="xraydar"><i></i><span>Independent classifier evidence</span></div>
-          <div class="progress-row" data-stage="localizer-load"><i></i><span>Prepare localization model</span></div>
           <div class="progress-row" data-stage="localizer"><i></i><span>Image observations and regions</span></div>
-          <div class="progress-row" data-stage="professor-load"><i></i><span>Prepare professor review</span></div>
           <div class="progress-row" data-stage="professor"><i></i><span>Professor review</span></div>
           <p id="progress-message">Waiting for analysis.</p>
         </div>

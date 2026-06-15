@@ -133,9 +133,10 @@ class Study(BaseModel):
 
 
 class TutorResponse(BaseModel):
-    summary: str
-    feedback: list[str]
-    suggested_checks: list[str]
+    student_read_assessment: str
+    model_evidence: list[str]
+    professor_assessment: str
+    reading_approach: list[str]
     uncertainty: list[str]
     quiz: list[str]
     provider: str

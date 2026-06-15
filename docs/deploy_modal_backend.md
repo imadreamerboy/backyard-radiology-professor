@@ -22,8 +22,9 @@ The Modal app uses:
 
 - `Dockerfile.modal`, equivalent to the local CUDA runtime without BuildKit-only
   cache mounts.
-- GPU fallback `L40S`, then `L4`.
-- A Modal Volume mounted at `/data` for GGUF, X-Raydar, and Hugging Face caches.
+- An `L40S` GPU profile for full MedGemma 27B + 4B residency.
+- A Modal Volume mounted at `/data` for GGUF, X-Raydar, Hugging Face caches,
+  and transient session state.
 - `HF_TOKEN` from the local environment during deploy, or a Modal secret named
   `backyard-radiology-professor-hf`.
 - Modal proxy authentication. Requests without the private key and secret are

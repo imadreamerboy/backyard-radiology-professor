@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import base64
-import shutil
 import tempfile
 import threading
 from contextlib import contextmanager
@@ -29,8 +28,9 @@ from radiology_trainer.domain import (
     StudentRead,
 )
 from radiology_trainer.learning import build_scorecard
-from radiology_trainer.reporting import format_session_note
+from radiology_trainer.reporting import format_professor_review, format_session_note
 from radiology_trainer.runtime_manifest import LLAMA_CPP_BUILD, PROFESSOR_REPO
+from radiology_trainer.session_store import SessionStore
 from radiology_trainer.study import StudyRecord, load_study
 
 
@@ -49,7 +49,12 @@ class TrainerService:
         self._gpu_lock = threading.Lock()
         self._queue_lock = threading.Lock()
         self._queue_depth = 0
-        self._workspace = Path(tempfile.mkdtemp(prefix="radiology-trainer-"))
+        self._workspace = (
+            Path(config.session_store_dir)
+            if config.session_store_dir
+            else Path(tempfile.mkdtemp(prefix="radiology-trainer-"))
+        )
+        self._store = SessionStore(self._workspace)
         self._client = LlamaCppClient(
             base_url=config.llama_base_url,
             api_key=config.llama_api_key,
@@ -108,9 +113,8 @@ class TrainerService:
 
     def delete_session(self, session_id: str) -> None:
         with self._sessions_lock:
-            record = self._sessions.pop(session_id, None)
-        if record:
-            shutil.rmtree(record.work_dir, ignore_errors=True)
+            self._sessions.pop(session_id, None)
+        self._store.delete(session_id)
 
     def render_image(
         self,
@@ -140,6 +144,7 @@ class TrainerService:
         record.public.status = "analyzing"
         record.public.blind_read = blind_read
         record.public.updated_at = datetime.now(UTC)
+        self._persist(record)
         yield {"type": "session", "status": "analyzing"}
 
         try:
@@ -175,22 +180,6 @@ class TrainerService:
 
                 if self.config.enable_medical_vlm and self.config.model_mode != "demo":
                     yield from self._run_localizer(primary, primary_record.public.id, evidence)
-                    yield {
-                        "type": "stage",
-                        "stage": "professor-load",
-                        "status": "running",
-                        "message": "Preparing professor review.",
-                    }
-                    self._switch_model(
-                        unload=self.config.localizer_model,
-                        load=self.config.professor_model,
-                    )
-                    yield {
-                        "type": "stage",
-                        "stage": "professor-load",
-                        "status": "complete",
-                    }
-
                 student_read = StudentRead(observation=blind_read)
                 scorecard = build_scorecard(evidence, student_read)
                 reference = record.study.public.reference
@@ -230,7 +219,7 @@ class TrainerService:
                 )
                 assistant = ChatMessage(
                     role="assistant",
-                    content=tutor.summary,
+                    content=format_professor_review(tutor),
                     model_run=tutor.model_run,
                     evidence_sources=["X-Raydar", "MedGemma 1.5 4B", "MedGemma 27B"],
                     region_ids=[item.id for item in evidence.regions],
@@ -239,6 +228,7 @@ class TrainerService:
                 record.public.messages = [assistant]
                 record.public.status = "complete"
                 record.public.updated_at = datetime.now(UTC)
+                self._persist(record)
                 yield {
                     "type": "complete",
                     "session": record.public.model_dump(mode="json"),
@@ -246,6 +236,7 @@ class TrainerService:
         except Exception as exc:
             record.public.status = "error"
             record.public.updated_at = datetime.now(UTC)
+            self._persist(record)
             yield {"type": "error", "message": str(exc)}
 
     def chat_stream(
@@ -261,6 +252,8 @@ class TrainerService:
             raise ValueError("Complete the blind-read analysis before starting chat.")
         user_message = ChatMessage(role="user", content=prompt)
         record.public.messages.append(user_message)
+        record.public.updated_at = datetime.now(UTC)
+        self._persist(record)
         yield {"type": "message", "message": user_message.model_dump(mode="json")}
 
         chunks: list[str] = []
@@ -270,9 +263,12 @@ class TrainerService:
                 yield {"type": "queue", "position": queue_position}
                 if self.config.model_mode == "demo":
                     text = (
-                        "In this demo, compare the question with the committed blind read and "
-                        "the independently listed evidence. Focus on observation, interpretation, "
-                        "and uncertainty as separate steps."
+                        "### Professor assessment\n"
+                        "In this demo mode, compare your question with the committed blind read "
+                        "and the independently listed evidence.\n\n"
+                        "### How to read it\n"
+                        "- Separate observation, interpretation, and uncertainty.\n"
+                        "- Use the reference and model evidence as teaching signals, not final authority."
                     )
                     for chunk in text.split(" "):
                         value = f"{chunk} "
@@ -280,10 +276,6 @@ class TrainerService:
                         yield {"type": "delta", "content": value}
                     metrics = {"latency_ms": 1}
                 else:
-                    self._switch_model(
-                        unload=self.config.localizer_model,
-                        load=self.config.professor_model,
-                    )
                     professor = self._professor_model()
                     for content, stream_metrics in professor.stream_reply(
                         evidence=record.public.result.evidence,
@@ -335,6 +327,7 @@ class TrainerService:
         )
         record.public.messages.append(assistant)
         record.public.updated_at = datetime.now(UTC)
+        self._persist(record)
         yield {"type": "complete", "message": assistant.model_dump(mode="json")}
 
     def _create_session(
@@ -374,11 +367,13 @@ class TrainerService:
             updated_at=now,
         )
         with self._sessions_lock:
-            self._sessions[identifier] = _SessionRecord(
+            record = _SessionRecord(
                 public=public,
                 study=study,
                 work_dir=directory,
             )
+            self._sessions[identifier] = record
+        self._persist(record)
         return public
 
     def _record(self, session_id: str) -> _SessionRecord:
@@ -386,8 +381,16 @@ class TrainerService:
         with self._sessions_lock:
             try:
                 return self._sessions[session_id]
-            except KeyError as exc:
-                raise KeyError("Unknown or expired session.") from exc
+            except KeyError:
+                pass
+        try:
+            public, study, work_dir = self._store.load(session_id)
+        except (FileNotFoundError, OSError, ValueError) as exc:
+            raise KeyError("Unknown or expired session.") from exc
+        record = _SessionRecord(public=public, study=study, work_dir=work_dir)
+        with self._sessions_lock:
+            self._sessions[session_id] = record
+        return record
 
     def _cleanup_expired(self) -> None:
         threshold = datetime.now(UTC) - timedelta(minutes=self.config.session_ttl_minutes)
@@ -397,7 +400,8 @@ class TrainerService:
                 for session_id, record in self._sessions.items()
                 if record.public.updated_at < threshold
             ]
-        for session_id in expired:
+        expired.extend(self._store.expired_ids(threshold))
+        for session_id in set(expired):
             self.delete_session(session_id)
 
     @contextmanager
@@ -444,21 +448,6 @@ class TrainerService:
         )
 
     def _run_localizer(self, image: Image.Image, image_id: str, evidence) -> Iterator[dict]:
-        yield {
-            "type": "stage",
-            "stage": "localizer-load",
-            "status": "running",
-            "message": "Preparing image localization.",
-        }
-        self._switch_model(
-            unload=self.config.professor_model,
-            load=self.config.localizer_model,
-        )
-        yield {
-            "type": "stage",
-            "stage": "localizer-load",
-            "status": "complete",
-        }
         if self._localizer is None:
             self._localizer = MedGemmaVisionTool(
                 client=self._client,
@@ -482,12 +471,8 @@ class TrainerService:
             "message": run.detail,
         }
 
-    def _switch_model(self, *, unload: str, load: str) -> None:
-        try:
-            self._client.unload_model(unload)
-        except Exception:
-            pass
-        self._client.load_model(load)
+    def _persist(self, record: _SessionRecord) -> None:
+        self._store.save(record.public, record.study)
 
     @staticmethod
     def _professor_images(study: StudyRecord) -> list[Image.Image]:

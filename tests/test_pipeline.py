@@ -13,6 +13,7 @@ from radiology_trainer.image_io import load_xray_image
 from radiology_trainer.learning import build_scorecard
 from radiology_trainer.pipeline import build_pipeline
 from radiology_trainer.reporting import format_session_note
+from radiology_trainer.service import TrainerService
 from radiology_trainer.ui import create_server
 
 
@@ -27,6 +28,10 @@ def test_demo_pipeline_returns_structured_evidence() -> None:
     assert evidence.findings
     assert evidence.regions
     assert tutor.quiz
+    assert tutor.student_read_assessment
+    assert tutor.model_evidence
+    assert tutor.professor_assessment
+    assert tutor.reading_approach
 
 
 def test_load_xray_image_from_png(tmp_path) -> None:
@@ -134,6 +139,31 @@ def test_session_api_streams_analysis_and_chat() -> None:
     assert chat.status_code == 200
     assert "event: delta" in chat.text
     assert "event: complete" in chat.text
+
+
+def test_session_survives_service_restart(tmp_path) -> None:
+    config = AppConfig(session_store_dir=str(tmp_path / "sessions"))
+    buffer = BytesIO()
+    Image.new("L", (320, 320), color=110).save(buffer, format="PNG")
+
+    first = TrainerService(config)
+    session = first.create_upload_session([("case.png", buffer.getvalue())])
+    events = list(
+        first.analyze_stream(
+            session.id,
+            "PA chest radiograph. No focal opacity.",
+        )
+    )
+    assert events[-1]["type"] == "complete"
+
+    second = TrainerService(config)
+    restored = second.get_session(session.id)
+    assert restored.status == "complete"
+    assert restored.result is not None
+    assert second.render_image(session.id, restored.study.primary_image_id).size == (320, 320)
+
+    chat_events = list(second.chat_stream(session.id, "What should I inspect next?"))
+    assert chat_events[-1]["type"] == "complete"
 
 
 def test_professor_context_includes_study_metadata() -> None:

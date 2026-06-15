@@ -12,3 +12,4 @@ data/
 *.egg-info/
 .tmp-space-readme/
 artifacts/video/
+artifacts/playwright/

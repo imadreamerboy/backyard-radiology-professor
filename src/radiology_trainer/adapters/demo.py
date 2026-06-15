@@ -89,12 +89,13 @@ class DemoTutorModel:
             feedback.append(f"Highest demo signals: {top_labels}.")
 
         return TutorResponse(
-            summary=(
+            student_read_assessment=" ".join(feedback[:2]),
+            model_evidence=[f"Highest demo signals: {top_labels}." if top else "No demo signals."],
+            professor_assessment=(
                 "Educational demo response. In local mode this slot is handled by the "
                 "MedGemma 27B radiology professor."
             ),
-            feedback=feedback,
-            suggested_checks=[
+            reading_approach=[
                 "Confirm projection and image quality before findings.",
                 "Trace tubes/lines and pleural margins before calling lung findings.",
                 "Use a search pattern: airway, bones, cardiac silhouette, diaphragm, everything else.",

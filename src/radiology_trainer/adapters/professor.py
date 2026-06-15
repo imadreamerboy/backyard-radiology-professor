@@ -23,28 +23,51 @@ from radiology_trainer.structured_output import parse_json_model
 
 
 PROFESSOR_SYSTEM_PROMPT = """You are Professor MedGemma, an experienced thoracic
-radiologist and demanding but constructive educator. This is educational practice only.
+radiologist and precise, constructive educator. This is educational practice only.
 
 Ground every answer in the supplied radiographs, the trainee's blind interpretation,
-the study metadata, the independently attributed X-Raydar signals, and MedGemma
-localization evidence.
-Separate direct observations from interpretation, differential diagnosis, uncertainty,
-and teaching points. Never invent image findings or claim certainty unsupported by the
-evidence. Do not give patient-specific treatment or clinical management instructions.
-Answer the trainee's actual question directly, then explain the reasoning concisely."""
+study metadata, independently attributed X-Raydar signals, MedGemma localization, and
+the public reference labels when supplied.
+
+For case review, reason in this order:
+1. What the student said: accurately summarize strengths, omissions, and unsupported claims.
+2. What the models suggest: attribute X-Raydar and MedGemma separately; scores are signals,
+   not diagnoses.
+3. Professor assessment: inspect the image yourself, reconcile conflicts, and state what the
+   finding most likely is or could be. If a public reference is supplied, treat it as the
+   educational answer and explain how the image supports it.
+4. How to read it: give a short reusable search method for recognizing or excluding the finding.
+
+For follow-up questions, answer the question first, then use the same four headings when they
+add value. Separate observation, interpretation, differential, and uncertainty. Never invent
+findings or claim certainty unsupported by the image. Do not give patient-specific treatment
+or management instructions."""
 
 
 INITIAL_REVIEW_PROMPT = """Return one JSON object with exactly these keys:
-summary, feedback, suggested_checks, uncertainty, quiz.
-feedback, suggested_checks, uncertainty, and quiz must be arrays of short strings.
-Act as a senior radiology professor reviewing a committed blind read. The quiz should
-contain one to three questions targeted to this case. Return JSON only."""
+student_read_assessment, model_evidence, professor_assessment, reading_approach,
+uncertainty, quiz.
+model_evidence, reading_approach, uncertainty, and quiz must be arrays of short strings.
+Use the public reference as the educational answer when present. Otherwise independently
+inspect the image and reconcile it with the attributed model evidence. The reading approach
+must be practical and reusable. Include one to three targeted quiz questions. Return JSON only."""
+
+CHAT_REPLY_PROMPT = """Answer in concise Markdown. Use these headings when useful:
+### What you said
+### What the models suggest
+### Professor assessment
+### How to read it
+### Uncertainty
+
+Prefer short bullets under each heading. If the trainee asks for a quiz, include
+### Quiz with one to three questions. Do not output JSON."""
 
 
 class _TutorPayload(BaseModel):
-    summary: str
-    feedback: list[str] = Field(min_length=1, max_length=6)
-    suggested_checks: list[str] = Field(min_length=1, max_length=6)
+    student_read_assessment: str
+    model_evidence: list[str] = Field(min_length=1, max_length=6)
+    professor_assessment: str
+    reading_approach: list[str] = Field(min_length=1, max_length=6)
     uncertainty: list[str] = Field(min_length=1, max_length=4)
     quiz: list[str] = Field(min_length=1, max_length=3)
 
@@ -98,9 +121,10 @@ class MedGemmaProfessorModel:
             payload = parse_json_model(text, _TutorPayload)
         except Exception as exc:
             return TutorResponse(
-                summary="MedGemma professor output is unavailable.",
-                feedback=[f"Model error: {exc}"],
-                suggested_checks=["Review the independently attributed evidence manually."],
+                student_read_assessment="The committed read could not be reviewed.",
+                model_evidence=[f"Model error: {exc}"],
+                professor_assessment="MedGemma professor output is unavailable.",
+                reading_approach=["Review the independently attributed evidence manually."],
                 uncertainty=["No generated professor guidance was accepted for this run."],
                 quiz=[],
                 provider=self.name,
@@ -137,6 +161,7 @@ class MedGemmaProfessorModel:
     ) -> Iterator[tuple[str, dict[str, Any]]]:
         context = StudentRead(observation=blind_read, question=question)
         first_content: list[dict[str, Any]] = [
+            {"type": "text", "text": CHAT_REPLY_PROMPT},
             {
                 "type": "text",
                 "text": _context_json(
