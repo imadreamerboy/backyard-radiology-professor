@@ -68,16 +68,7 @@ def create_server(config: AppConfig | None = None) -> gr.Server:
 
     @server.get("/api/cases")
     def cases() -> list[dict[str, Any]]:
-        return [
-            {
-                "id": case.id,
-                "title": case.title,
-                "difficulty": case.difficulty,
-                "available": Path(case.image_path).exists(),
-                "reference_source": case.reference.source,
-            }
-            for case in demo_cases(cfg.xraydar_backend_dir)
-        ]
+        return _case_catalog(cfg)
 
     @server.post("/api/sessions")
     async def create_session(
@@ -287,6 +278,8 @@ def _create_proxy_server(config: AppConfig) -> gr.Server:
     proxy = RemoteBackendProxy(
         config.remote_backend_url,
         timeout_seconds=config.model_timeout_seconds,
+        modal_key=config.modal_proxy_key,
+        modal_secret=config.modal_proxy_secret,
     )
     server = gr.Server(
         title="Backyard Radiology Professor",
@@ -300,11 +293,69 @@ def _create_proxy_server(config: AppConfig) -> gr.Server:
     def index() -> FileResponse:
         return FileResponse(STATIC_DIR / "index.html")
 
+    @server.get("/api/cases")
+    def cases() -> list[dict[str, Any]]:
+        return _case_catalog(config)
+
+    @server.get("/api/status")
+    async def status(request: Request) -> Response:
+        if request.query_params.get("wake") == "true":
+            return await proxy.forward("status", request)
+        return JSONResponse(_on_demand_status(config))
+
     @server.api_route("/api/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
     async def api_proxy(path: str, request: Request) -> Response:
         return await proxy.forward(path, request)
 
     return server
+
+
+def _case_catalog(config: AppConfig) -> list[dict[str, Any]]:
+    return [
+        {
+            "id": case.id,
+            "title": case.title,
+            "difficulty": case.difficulty,
+            "available": Path(case.image_path).exists(),
+            "reference_source": case.reference.source,
+        }
+        for case in demo_cases(config.xraydar_backend_dir)
+    ]
+
+
+def _on_demand_status(config: AppConfig) -> dict[str, Any]:
+    return {
+        "mode": "remote",
+        "runtime": "llama.cpp on Modal",
+        "runtime_revision": LLAMA_CPP_BUILD,
+        "runtime_status": "on-demand",
+        "models": [],
+        "model_revisions": [
+            {
+                "id": config.professor_model,
+                "source": PROFESSOR_REPO,
+                "revision": config.professor_revision,
+                "quantization": PROFESSOR_QUANTIZATION,
+            },
+            {
+                "id": config.localizer_model,
+                "source": LOCALIZER_REPO,
+                "revision": config.localizer_revision,
+                "quantization": LOCALIZER_QUANTIZATION,
+            },
+        ],
+        "required_models": [config.professor_model, config.localizer_model],
+        "models_max": 1,
+        "queue_depth": 0,
+        "xraydar_available": True,
+        "xraydar": {
+            "source": XRAYDAR_REPO,
+            "weights_revision": config.xraydar_revision,
+            "code_revision": XRAYDAR_CODE_REVISION,
+        },
+        "gpu": None,
+        "detail": "The GPU backend starts when a study is opened.",
+    }
 
 
 def launch_server(config: AppConfig | None = None) -> None:

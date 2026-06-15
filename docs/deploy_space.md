@@ -11,8 +11,16 @@ CUDA llama.cpp router on port 8080, verifies both model presets, and serves
 Gradio on port 7860.
 
 When the official org cannot allocate paid GPU hardware, deploy the real backend
-on Modal and set `RAD_TRAINER_REMOTE_BACKEND_URL` on the Space. In that mode the
-Space serves the same Gradio workstation and proxies `/api/*` to Modal.
+on Modal. In that mode the Space serves the same Gradio workstation and proxies
+inference requests to Modal. Configure:
+
+- Variable `RAD_TRAINER_REMOTE_BACKEND_URL`
+- Secret `RAD_TRAINER_MODAL_KEY`
+- Secret `RAD_TRAINER_MODAL_SECRET`
+
+Use `scripts/configure_hf_space.py` to upload the application and set all three.
+See [deploy_modal_backend.md](deploy_modal_backend.md) for the authenticated
+scale-to-zero workflow.
 
 Required router aliases:
 

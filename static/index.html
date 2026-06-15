@@ -196,22 +196,39 @@
       <button class="icon-button dialog-close" id="close-onboarding" aria-label="Close walkthrough"><i data-lucide="x"></i></button>
       <div class="walkthrough-step active" data-step="0">
         <span class="eyebrow">Step 1</span>
-        <h1>Read before the models</h1>
-        <p>Select a public case or open a CR/DX study. Manipulate the image, enter findings naturally, then lock the interpretation.</p>
+        <h1>Practice chest X-ray reading</h1>
+        <p>This is an educational workstation for chest radiographs. Choose one of the labeled practice studies or open a de-identified CR/DX image. The first study may take about a minute while the on-demand GPU starts.</p>
+        <ul class="walkthrough-list">
+          <li>Use the viewer controls to zoom, pan, invert, rotate, and adjust windowing.</li>
+          <li>The app is for deliberate practice, not diagnosis or clinical use.</li>
+        </ul>
       </div>
       <div class="walkthrough-step" data-step="1">
         <span class="eyebrow">Step 2</span>
-        <h1>Inspect attributed evidence</h1>
-        <p>X-Raydar scores and MedGemma regions stay separate. Regions can be focused, faded, hidden, removed, and restored.</p>
+        <h1>Commit a blind read</h1>
+        <p>A blind read is your interpretation before seeing AI or reference findings. Describe image quality, observations, and your impression in normal language, then lock the read.</p>
+        <ul class="walkthrough-list">
+          <li>Example: "PA chest. Cardiomediastinal silhouette is enlarged. No focal airspace opacity."</li>
+          <li>Locking the read prevents hindsight from changing what you initially saw.</li>
+        </ul>
       </div>
       <div class="walkthrough-step" data-step="2">
         <span class="eyebrow">Step 3</span>
-        <h1>Question the professor</h1>
-        <p>MedGemma 27B sees the study, blind read, model evidence, and conversation. Use the chat to explain, compare, differentiate, or quiz.</p>
+        <h1>Compare independent evidence</h1>
+        <p>X-Raydar classification scores and MedGemma regions are shown separately so you can see which model produced each suggestion. A score ranks a classifier finding; it is not a diagnosis or calibrated certainty.</p>
+        <ul class="walkthrough-list">
+          <li>Click a region to focus it. You can fade, hide, remove, and restore overlays.</li>
+          <li>Use the question-mark controls beside numbers for their source, unit, and meaning.</li>
+        </ul>
+      </div>
+      <div class="walkthrough-step" data-step="3">
+        <span class="eyebrow">Step 4</span>
+        <h1>Ask the radiology professor</h1>
+        <p>MedGemma 27B receives the image, available DICOM metadata, your blind read, X-Raydar findings, and MedGemma regions. Ask it to explain a miss, compare evidence, build a differential, or quiz you.</p>
         <div class="shortcut-list"><kbd>F</kbd> fit <kbd>I</kbd> invert <kbd>R</kbd> ruler <kbd>W</kbd> window <kbd>Esc</kbd> pan</div>
       </div>
       <div class="walkthrough-footer">
-        <div class="step-dots"><i class="active"></i><i></i><i></i></div>
+        <div class="step-dots"><i class="active"></i><i></i><i></i><i></i></div>
         <button class="primary-action compact" id="walkthrough-next">Next</button>
       </div>
     </div>

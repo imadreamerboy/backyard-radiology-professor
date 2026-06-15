@@ -29,10 +29,11 @@ image = modal.Image.from_dockerfile("Dockerfile.modal", context_dir=".")
     volumes={"/data": cache_volume},
     secrets=[_hf_secret()],
     timeout=2 * 60 * 60,
-    scaledown_window=30 * 60,
+    min_containers=0,
+    scaledown_window=60,
     max_containers=1,
 )
 @modal.concurrent(max_inputs=20)
-@modal.web_server(7860, startup_timeout=30 * 60)
+@modal.web_server(7860, startup_timeout=30 * 60, requires_proxy_auth=True)
 def serve() -> None:
     subprocess.Popen(["bash", "scripts/entrypoint.sh"], cwd="/workspace")

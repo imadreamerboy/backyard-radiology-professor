@@ -10,4 +10,5 @@ __pycache__/
 outputs/
 data/
 *.egg-info/
-
+.tmp-space-readme/
+artifacts/video/

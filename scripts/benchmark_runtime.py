@@ -17,7 +17,10 @@ def main() -> None:
     sampler = _GpuSampler(args.app_url)
     sampler.start()
     try:
-        status = requests.get(f"{args.app_url}/api/status", timeout=30).json()
+        status = requests.get(
+            f"{args.app_url}/api/status?wake=true",
+            timeout=args.timeout_seconds,
+        ).json()
         runs = [_run(args, index) for index in range(args.runs)]
     finally:
         sampler.stop()
@@ -157,7 +160,7 @@ class _GpuSampler:
 
     def _sample_remote_gpu(self) -> None:
         try:
-            status = requests.get(f"{self.app_url}/api/status", timeout=10).json()
+            status = requests.get(f"{self.app_url}/api/status?wake=true", timeout=10).json()
             gpu = status.get("gpu") or {}
             used = gpu.get("memory_used_mb")
             if used is not None:

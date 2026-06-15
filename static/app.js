@@ -75,9 +75,13 @@ function bindEvents() {
 
 async function loadCases() {
   try {
-    state.cases = await api("/api/cases");
+    const cases = await api("/api/cases");
+    if (!Array.isArray(cases)) throw new Error("Practice studies are temporarily unavailable.");
+    state.cases = cases;
     renderCases();
   } catch (error) {
+    state.cases = [];
+    renderCases();
     showError(error.message);
   }
 }
@@ -86,10 +90,14 @@ async function loadRuntimeStatus() {
   try {
     state.runtime = await api("/api/status");
     const indicator = $("#runtime-state");
-    const ready = ["ready", "demo"].includes(state.runtime.runtime_status);
+    const ready = ["ready", "demo", "on-demand"].includes(state.runtime.runtime_status);
     indicator.className = `runtime-state ${ready ? "ready" : "error"}`;
     indicator.querySelector("span").textContent = ready
-      ? state.runtime.runtime_status === "demo" ? "Practice mode" : "Models ready"
+      ? state.runtime.runtime_status === "demo"
+        ? "Practice mode"
+        : state.runtime.runtime_status === "on-demand"
+          ? "GPU on demand"
+          : "Models ready"
       : state.runtime.runtime_status === "loading" ? "Models loading" : "Runtime unavailable";
   } catch {
     $("#runtime-state").className = "runtime-state error";
@@ -99,6 +107,10 @@ async function loadRuntimeStatus() {
 
 function renderCases() {
   const completed = completedCases();
+  if (!state.cases.length) {
+    $("#case-list").innerHTML = '<div class="case-empty">Practice studies could not be loaded. You can still open a local chest study.</div>';
+    return;
+  }
   $("#case-list").innerHTML = state.cases.map((item) => `
     <button class="case-item ${completed.includes(item.id) ? "complete" : ""}" data-case="${escapeHtml(item.id)}" ${item.available ? "" : "disabled"}>
       <strong>${escapeHtml(item.title)}</strong>
@@ -795,15 +807,17 @@ function closeOnboarding() {
 }
 
 function advanceOnboarding() {
-  if (state.onboardingStep >= 2) return closeOnboarding();
+  const steps = $$(".walkthrough-step");
+  if (state.onboardingStep >= steps.length - 1) return closeOnboarding();
   state.onboardingStep += 1;
   renderOnboarding();
 }
 
 function renderOnboarding() {
-  $$(".walkthrough-step").forEach((step, index) => step.classList.toggle("active", index === state.onboardingStep));
+  const steps = $$(".walkthrough-step");
+  steps.forEach((step, index) => step.classList.toggle("active", index === state.onboardingStep));
   $$(".step-dots i").forEach((dot, index) => dot.classList.toggle("active", index === state.onboardingStep));
-  $("#walkthrough-next").textContent = state.onboardingStep === 2 ? "Start" : "Next";
+  $("#walkthrough-next").textContent = state.onboardingStep === steps.length - 1 ? "Start" : "Next";
 }
 
 function applySavedTheme() {
@@ -902,7 +916,15 @@ function updateProgress() {
 }
 
 function setBusy(busy, label = "") {
-  $("#runtime-state span").textContent = busy ? label : state.runtime?.runtime_status === "ready" ? "Models ready" : state.runtime?.runtime_status === "demo" ? "Practice mode" : "Checking";
+  $("#runtime-state span").textContent = busy
+    ? label
+    : state.runtime?.runtime_status === "ready"
+      ? "Models ready"
+      : state.runtime?.runtime_status === "demo"
+        ? "Practice mode"
+        : state.runtime?.runtime_status === "on-demand"
+          ? "GPU on demand"
+          : "Checking";
 }
 
 function showError(message) {

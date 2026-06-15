@@ -17,6 +17,8 @@ class AppConfig:
     llama_base_url: str = "http://127.0.0.1:8080/v1"
     llama_api_key: str = "local"
     remote_backend_url: str = ""
+    modal_proxy_key: str = ""
+    modal_proxy_secret: str = ""
     professor_model: str = "medgemma-professor"
     professor_revision: str = PROFESSOR_REVISION
     localizer_model: str = "medgemma-localizer"
@@ -45,6 +47,8 @@ class AppConfig:
             remote_backend_url=os.getenv("RAD_TRAINER_REMOTE_BACKEND_URL", "")
             .strip()
             .rstrip("/"),
+            modal_proxy_key=os.getenv("RAD_TRAINER_MODAL_KEY", "").strip(),
+            modal_proxy_secret=os.getenv("RAD_TRAINER_MODAL_SECRET", "").strip(),
             professor_model=os.getenv(
                 "RAD_TRAINER_PROFESSOR_MODEL",
                 "medgemma-professor",

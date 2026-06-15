@@ -50,7 +50,7 @@ CASES = (
 
 def main() -> None:
     args = _parse_args()
-    status = requests.get(f"{args.app_url}/api/status", timeout=30).json()
+    status = requests.get(f"{args.app_url}/api/status?wake=true", timeout=args.timeout_seconds).json()
     reports = [_run_case(args, case) for case in CASES]
     passed = status.get("runtime_status") == "ready" and all(
         report["passed"] for report in reports

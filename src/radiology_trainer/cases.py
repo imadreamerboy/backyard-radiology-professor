@@ -5,6 +5,9 @@ from pathlib import Path
 from radiology_trainer.domain import DemoCase, ReferenceAnswer
 
 
+ROOT = Path(__file__).resolve().parents[2]
+BUNDLED_DATA_DIR = ROOT / "assets" / "demo_cases"
+
 _CASE_SPECS = (
     {
         "id": "normal",
@@ -37,7 +40,7 @@ _CASE_SPECS = (
 
 
 def demo_cases(backend_dir: str | Path = "outputs/xraydar-cv") -> list[DemoCase]:
-    data_dir = Path(backend_dir) / "demo_data"
+    data_dir = _demo_data_dir(backend_dir)
     return [
         DemoCase(
             id=spec["id"],
@@ -60,3 +63,9 @@ def get_demo_case(case_id: str, backend_dir: str | Path = "outputs/xraydar-cv") 
         if case.id == case_id:
             return case
     raise KeyError(case_id)
+
+
+def _demo_data_dir(backend_dir: str | Path) -> Path:
+    if all((BUNDLED_DATA_DIR / spec["filename"]).exists() for spec in _CASE_SPECS):
+        return BUNDLED_DATA_DIR
+    return Path(backend_dir) / "demo_data"

@@ -24,9 +24,18 @@ HOP_BY_HOP_HEADERS = {
 
 
 class RemoteBackendProxy:
-    def __init__(self, base_url: str, *, timeout_seconds: float = 1800.0) -> None:
+    def __init__(
+        self,
+        base_url: str,
+        *,
+        timeout_seconds: float = 1800.0,
+        modal_key: str = "",
+        modal_secret: str = "",
+    ) -> None:
         self.base_url = base_url.rstrip("/")
         self.timeout_seconds = timeout_seconds
+        self.modal_key = modal_key
+        self.modal_secret = modal_secret
 
     async def forward(self, path: str, request: Request) -> Response:
         url = f"{self.base_url}/api/{path}"
@@ -36,7 +45,11 @@ class RemoteBackendProxy:
                 url,
                 params=list(request.query_params.multi_items()),
                 data=(await request.body()) or None,
-                headers=_forward_headers(request.headers),
+                headers=_forward_headers(
+                    request.headers,
+                    modal_key=self.modal_key,
+                    modal_secret=self.modal_secret,
+                ),
                 stream=True,
                 timeout=(20, self.timeout_seconds),
             )
@@ -65,12 +78,21 @@ class RemoteBackendProxy:
         )
 
 
-def _forward_headers(headers: Any) -> dict[str, str]:
-    return {
+def _forward_headers(
+    headers: Any,
+    *,
+    modal_key: str = "",
+    modal_secret: str = "",
+) -> dict[str, str]:
+    forwarded = {
         key: value
         for key, value in headers.items()
-        if key.lower() not in HOP_BY_HOP_HEADERS
+        if key.lower() not in HOP_BY_HOP_HEADERS | {"modal-key", "modal-secret"}
     }
+    if modal_key and modal_secret:
+        forwarded["Modal-Key"] = modal_key
+        forwarded["Modal-Secret"] = modal_secret
+    return forwarded
 
 
 def _response_headers(headers: Any) -> dict[str, str]:

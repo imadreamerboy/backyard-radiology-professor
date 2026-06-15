@@ -179,9 +179,43 @@ def test_server_proxy_mode_forwards_api(monkeypatch) -> None:
         return FakeResponse()
 
     monkeypatch.setattr("radiology_trainer.remote_proxy.requests.request", fake_request)
-    client = TestClient(create_server(AppConfig(remote_backend_url="https://modal.example")))
-    response = client.get("/api/status")
+    client = TestClient(
+        create_server(
+            AppConfig(
+                remote_backend_url="https://modal.example",
+                modal_proxy_key="wk-test",
+                modal_proxy_secret="ws-test",
+            )
+        )
+    )
+    response = client.get("/api/status?wake=true")
     assert response.status_code == 200
     assert response.json()["runtime_status"] == "ready"
     assert calls[0][0] == "GET"
     assert calls[0][1] == "https://modal.example/api/status"
+    assert calls[0][2]["headers"]["Modal-Key"] == "wk-test"
+    assert calls[0][2]["headers"]["Modal-Secret"] == "ws-test"
+
+
+def test_server_proxy_mode_serves_case_catalog_without_backend(monkeypatch) -> None:
+    def fail_request(*args, **kwargs):
+        raise AssertionError("Case catalog should not call the remote backend.")
+
+    monkeypatch.setattr("radiology_trainer.remote_proxy.requests.request", fail_request)
+    client = TestClient(create_server(AppConfig(remote_backend_url="https://modal.example")))
+    response = client.get("/api/cases")
+    assert response.status_code == 200
+    cases = response.json()
+    assert [case["id"] for case in cases] == ["normal", "scoliosis", "cardiomediastinal"]
+    assert all(case["available"] for case in cases)
+
+
+def test_server_proxy_status_does_not_wake_backend(monkeypatch) -> None:
+    def fail_request(*args, **kwargs):
+        raise AssertionError("On-demand status should not call the remote backend.")
+
+    monkeypatch.setattr("radiology_trainer.remote_proxy.requests.request", fail_request)
+    client = TestClient(create_server(AppConfig(remote_backend_url="https://modal.example")))
+    response = client.get("/api/status")
+    assert response.status_code == 200
+    assert response.json()["runtime_status"] == "on-demand"

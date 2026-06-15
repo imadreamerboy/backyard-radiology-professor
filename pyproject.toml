@@ -40,6 +40,9 @@ dev = [
 deploy = [
     "modal>=1.5.0",
 ]
+video = [
+    "playwright>=1.52",
+]
 
 [tool.uv]
 package = true
