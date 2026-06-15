@@ -52,6 +52,14 @@ Use the public reference as the educational answer when present. Otherwise indep
 inspect the image and reconcile it with the attributed model evidence. The reading approach
 must be practical and reusable. Include one to three targeted quiz questions. Return JSON only."""
 
+REPAIR_REVIEW_PROMPT = """Convert the previous professor review into one JSON object
+with exactly these keys: student_read_assessment, model_evidence,
+professor_assessment, reading_approach, uncertainty, quiz.
+
+model_evidence, reading_approach, uncertainty, and quiz must be arrays of short
+strings. If the previous answer omitted a field, infer it from the supplied case
+context. Return JSON only."""
+
 CHAT_REPLY_PROMPT = """Answer in concise Markdown. Use these headings when useful:
 ### What you said
 ### What the models suggest
@@ -108,17 +116,15 @@ class MedGemmaProfessorModel:
                         "image_url": {"url": self.client.image_url(image)},
                     }
                 )
-            text = self.client.chat(
+            messages = [
+                {"role": "system", "content": PROFESSOR_SYSTEM_PROMPT},
+                {"role": "user", "content": content},
+            ]
+            payload = _structured_review(
+                self.client,
                 model=self.config.professor_model,
-                messages=[
-                    {"role": "system", "content": PROFESSOR_SYSTEM_PROMPT},
-                    {"role": "user", "content": content},
-                ],
-                max_tokens=900,
-                temperature=0.1,
-                json_schema=_TutorPayload.model_json_schema(),
+                messages=messages,
             )
-            payload = parse_json_model(text, _TutorPayload)
         except Exception as exc:
             return TutorResponse(
                 student_read_assessment="The committed read could not be reviewed.",
@@ -216,6 +222,37 @@ def _context_json(
         },
         ensure_ascii=True,
     )
+
+
+def _structured_review(
+    client: LlamaCppClient,
+    *,
+    model: str,
+    messages: list[dict[str, Any]],
+) -> _TutorPayload:
+    text = client.chat(
+        model=model,
+        messages=messages,
+        max_tokens=900,
+        temperature=0.1,
+        json_schema=_TutorPayload.model_json_schema(),
+    )
+    try:
+        return parse_json_model(text, _TutorPayload)
+    except Exception:
+        repair_messages = [
+            *messages,
+            {"role": "assistant", "content": text},
+            {"role": "user", "content": REPAIR_REVIEW_PROMPT},
+        ]
+        repaired = client.chat(
+            model=model,
+            messages=repair_messages,
+            max_tokens=700,
+            temperature=0.0,
+            json_schema=_TutorPayload.model_json_schema(),
+        )
+        return parse_json_model(repaired, _TutorPayload)
 
 
 def _run(

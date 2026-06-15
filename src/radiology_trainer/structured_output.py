@@ -15,15 +15,23 @@ def parse_json_model(text: str, model_type: type[T]) -> T:
     return model_type.model_validate(json.loads(candidate))
 
 
+def parse_json_value(text: str):
+    return json.loads(_extract_json(text))
+
+
 def _extract_json(text: str) -> str:
     cleaned = text.strip()
     fenced = re.search(r"```(?:json)?\s*(.*?)```", cleaned, flags=re.DOTALL | re.IGNORECASE)
     if fenced:
         cleaned = fenced.group(1).strip()
 
-    object_start = cleaned.find("{")
-    object_end = cleaned.rfind("}")
-    if object_start >= 0 and object_end > object_start:
-        return cleaned[object_start : object_end + 1]
+    candidates = [
+        (cleaned.find("{"), cleaned.rfind("}")),
+        (cleaned.find("["), cleaned.rfind("]")),
+    ]
+    candidates = [(start, end) for start, end in candidates if start >= 0 and end > start]
+    if candidates:
+        start, end = min(candidates, key=lambda item: item[0])
+        return cleaned[start : end + 1]
 
-    raise ValueError("Model response did not contain a JSON object.")
+    raise ValueError("Model response did not contain JSON.")

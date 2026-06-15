@@ -807,11 +807,13 @@ async function sendChat() {
   state.session.messages.push({ role: "user", content: question, evidence_sources: [] });
   renderChat();
   $("#chat-messages").insertAdjacentHTML("beforeend", messageHtml({ role: "assistant", content: "", evidence_sources: [] }, true));
+  let streamingContent = "";
   try {
     await streamSse(`/api/sessions/${state.session.id}/chat`, { message: question }, (event) => {
       if (event.type === "delta") {
         const body = $("#streaming-message .message-body");
-        body.textContent += event.content;
+        streamingContent += event.content;
+        body.innerHTML = formatMessageContent(streamingContent);
         $("#chat-messages").scrollTop = $("#chat-messages").scrollHeight;
       }
       if (event.type === "error") throw new Error(event.message);

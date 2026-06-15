@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import time
 from dataclasses import dataclass
 
@@ -15,12 +14,17 @@ from radiology_trainer.domain import (
     VisionObservation,
 )
 from radiology_trainer.runtime_manifest import LLAMA_CPP_BUILD, LOCALIZER_REPO
-from radiology_trainer.structured_output import parse_json_model
+from radiology_trainer.structured_output import parse_json_model, parse_json_value
 
 
 class _Observation(BaseModel):
     label: str
     description: str
+
+
+class _Prediction(BaseModel):
+    label: str
+    rationale: str
 
 
 class _RawBox(BaseModel):
@@ -29,6 +33,7 @@ class _RawBox(BaseModel):
 
 
 class _AssessmentPayload(BaseModel):
+    prediction: _Prediction
     observations: list[_Observation] = Field(default_factory=list, max_length=6)
     uncertainty: list[str] = Field(default_factory=list, max_length=4)
 
@@ -53,13 +58,26 @@ _ASSESSMENT_JSON_SCHEMA = {
                 "additionalProperties": False,
             },
         },
+        "prediction": {
+            "type": "object",
+            "properties": {
+                "label": {"type": "string", "minLength": 1, "maxLength": 80},
+                "rationale": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 180,
+                },
+            },
+            "required": ["label", "rationale"],
+            "additionalProperties": False,
+        },
         "uncertainty": {
             "type": "array",
             "maxItems": 4,
             "items": {"type": "string", "minLength": 1, "maxLength": 180},
         },
     },
-    "required": ["observations", "uncertainty"],
+    "required": ["prediction", "observations", "uncertainty"],
     "additionalProperties": False,
 }
 
@@ -130,24 +148,37 @@ class MedGemmaVisionTool:
                 json_schema=_ASSESSMENT_JSON_SCHEMA,
             )
             payload = parse_json_model(text, _AssessmentPayload)
-            observations = [
+            observations = []
+            observations.append(
+                VisionObservation(
+                    label=f"Prediction: {payload.prediction.label}",
+                    description=payload.prediction.rationale,
+                    source=self.name,
+                )
+            )
+            observations.extend([
                 VisionObservation(
                     label=item.label,
                     description=item.description,
                     source=self.name,
                 )
                 for item in payload.observations
-            ]
-            regions = [
-                _localize_target(
-                    self.client,
-                    self.model_id,
-                    padded_image,
-                    image.size,
-                    target,
-                )
-                for target in targets[:3]
-            ]
+            ])
+            regions = []
+            box_uncertainty: list[str] = []
+            for target in targets[:3]:
+                try:
+                    regions.append(
+                        _localize_target(
+                            self.client,
+                            self.model_id,
+                            padded_image,
+                            image.size,
+                            target,
+                        )
+                    )
+                except Exception as exc:
+                    box_uncertainty.append(f"No valid MedGemma box for {target}: {exc}")
         except Exception as exc:
             return [], [], [], _model_run(
                 started,
@@ -160,18 +191,20 @@ class MedGemmaVisionTool:
         return (
             observations,
             regions,
-            payload.uncertainty,
+            [*payload.uncertainty, *box_uncertainty],
             _model_run(started, self.model_id, self.model_revision, "ok"),
         )
 
 
 def _build_assessment_prompt() -> str:
     return (
-        "Educational chest X-ray review only. Independently inspect the image. Describe "
-        "up to six visible observations that a trainee should verify. Keep every description "
-        "under 20 words. Uncertainty entries must be short limitations, not anatomy labels. "
-        "Do not infer diagnoses from metadata or prior model output. Return only a JSON "
-        "object containing observations and uncertainty."
+        "Educational chest X-ray review only. Independently inspect the image. Provide one "
+        "best educational prediction in prediction.label with a short visual rationale. "
+        "Use 'No acute abnormality' when no focal finding is visible. "
+        "Then describe up to six visible observations that a trainee should verify. Keep "
+        "every description under 20 words. Uncertainty entries must be short limitations, "
+        "not anatomy labels. Do not infer diagnoses from metadata or prior model output. "
+        "Return only a JSON object containing prediction, observations, and uncertainty."
     )
 
 
@@ -205,7 +238,7 @@ def _localize_target(
         temperature=0.0,
         json_schema=_BOX_JSON_SCHEMA,
     )
-    values = json.loads(text)
+    values = parse_json_value(text)
     if not isinstance(values, list) or len(values) != 1:
         raise ValueError(f"MedGemma returned an invalid box list for {target}.")
     return _convert_box(_RawBox.model_validate(values[0]), original_size)
