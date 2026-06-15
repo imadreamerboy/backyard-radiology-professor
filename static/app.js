@@ -902,7 +902,7 @@ function updateProgress() {
 }
 
 function setBusy(busy, label = "") {
-  $("#runtime-state span").textContent = busy ? label : state.runtime?.runtime_status === "ready" ? "Models ready" : state.runtime?.runtime_status === "demo" ? "Practice mode" : "Checking runtime";
+  $("#runtime-state span").textContent = busy ? label : state.runtime?.runtime_status === "ready" ? "Models ready" : state.runtime?.runtime_status === "demo" ? "Practice mode" : "Checking";
 }
 
 function showError(message) {

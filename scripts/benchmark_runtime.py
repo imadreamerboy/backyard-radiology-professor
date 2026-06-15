@@ -14,7 +14,7 @@ import requests
 
 def main() -> None:
     args = _parse_args()
-    sampler = _GpuSampler()
+    sampler = _GpuSampler(args.app_url)
     sampler.start()
     try:
         status = requests.get(f"{args.app_url}/api/status", timeout=30).json()
@@ -27,10 +27,11 @@ def main() -> None:
         "runtime_status": status,
         "host_baseline_gpu_memory_mb": args.gpu_baseline_mb,
         "peak_gpu_memory_mb": sampler.peak_memory_mb,
-        "peak_application_gpu_memory_mb": max(
-            0,
-            sampler.peak_memory_mb - args.gpu_baseline_mb,
+        "peak_application_gpu_memory_mb": sampler.application_peak_memory_mb(
+            args.gpu_baseline_mb
         ),
+        "local_peak_gpu_memory_mb": sampler.local_peak_memory_mb,
+        "remote_peak_gpu_memory_mb": sampler.remote_peak_memory_mb,
         "runs": runs,
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -108,8 +109,10 @@ def _stream(url: str, payload: dict[str, Any], timeout: float) -> list[dict[str,
 
 
 class _GpuSampler:
-    def __init__(self) -> None:
-        self.peak_memory_mb = 0
+    def __init__(self, app_url: str) -> None:
+        self.app_url = app_url.rstrip("/")
+        self.local_peak_memory_mb = 0
+        self.remote_peak_memory_mb = 0
         self._stop = threading.Event()
         self._thread = threading.Thread(target=self._sample, daemon=True)
 
@@ -120,24 +123,47 @@ class _GpuSampler:
         self._stop.set()
         self._thread.join(timeout=2)
 
+    @property
+    def peak_memory_mb(self) -> int:
+        return max(self.local_peak_memory_mb, self.remote_peak_memory_mb)
+
+    def application_peak_memory_mb(self, baseline_mb: int) -> int:
+        if self.remote_peak_memory_mb:
+            return self.remote_peak_memory_mb
+        return max(0, self.local_peak_memory_mb - baseline_mb)
+
     def _sample(self) -> None:
         while not self._stop.is_set():
-            try:
-                value = subprocess.run(
-                    [
-                        "nvidia-smi",
-                        "--query-gpu=memory.used",
-                        "--format=csv,noheader,nounits",
-                    ],
-                    check=True,
-                    capture_output=True,
-                    text=True,
-                    timeout=3,
-                ).stdout.splitlines()[0]
-                self.peak_memory_mb = max(self.peak_memory_mb, int(value.strip()))
-            except Exception:
-                pass
-            self._stop.wait(0.25)
+            self._sample_local_gpu()
+            self._sample_remote_gpu()
+            self._stop.wait(1.0)
+
+    def _sample_local_gpu(self) -> None:
+        try:
+            value = subprocess.run(
+                [
+                    "nvidia-smi",
+                    "--query-gpu=memory.used",
+                    "--format=csv,noheader,nounits",
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=3,
+            ).stdout.splitlines()[0]
+            self.local_peak_memory_mb = max(self.local_peak_memory_mb, int(value.strip()))
+        except Exception:
+            pass
+
+    def _sample_remote_gpu(self) -> None:
+        try:
+            status = requests.get(f"{self.app_url}/api/status", timeout=10).json()
+            gpu = status.get("gpu") or {}
+            used = gpu.get("memory_used_mb")
+            if used is not None:
+                self.remote_peak_memory_mb = max(self.remote_peak_memory_mb, int(used))
+        except Exception:
+            pass
 
 
 def _parse_args() -> argparse.Namespace:
