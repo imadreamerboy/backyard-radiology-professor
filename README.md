@@ -5,6 +5,17 @@ colorFrom: gray
 colorTo: teal
 sdk: docker
 app_port: 7860
+tags:
+  - build-small-hackathon
+  - backyard-ai
+  - gradio
+  - llama-cpp
+  - medgemma
+  - radiology
+  - dicom
+models:
+  - unsloth/medgemma-27b-it-GGUF
+  - unsloth/medgemma-1.5-4b-it-GGUF
 ---
 
 # Backyard Radiology Professor

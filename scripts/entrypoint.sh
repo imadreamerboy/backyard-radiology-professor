@@ -1,6 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [ -d /data ]; then
+  mkdir -p /data/backyard-radiology-professor/outputs
+  mkdir -p /data/backyard-radiology-professor/hf-cache
+  rm -rf outputs
+  ln -s /data/backyard-radiology-professor/outputs outputs
+  export HF_HOME=/data/backyard-radiology-professor/hf-cache
+  export HUGGINGFACE_HUB_CACHE=/data/backyard-radiology-professor/hf-cache/hub
+fi
+
 uv run --no-sync python scripts/prepare_runtime.py
 
 llama-server \
