@@ -148,14 +148,14 @@ class MedGemmaVisionTool:
                 json_schema=_ASSESSMENT_JSON_SCHEMA,
             )
             payload = parse_json_model(text, _AssessmentPayload)
-            observations = []
-            observations.append(
+            prediction = _best_prediction(payload)
+            observations = [
                 VisionObservation(
-                    label=f"Prediction: {payload.prediction.label}",
-                    description=payload.prediction.rationale,
+                    label=f"Prediction: {prediction.label}",
+                    description=prediction.rationale,
                     source=self.name,
                 )
-            )
+            ]
             observations.extend([
                 VisionObservation(
                     label=item.label,
@@ -200,7 +200,9 @@ def _build_assessment_prompt() -> str:
     return (
         "Educational chest X-ray review only. Independently inspect the image. Provide one "
         "best educational prediction in prediction.label with a short visual rationale. "
-        "Use 'No acute abnormality' when no focal finding is visible. "
+        "Name the most important visible finding, whether acute or chronic. Do not use "
+        "'No acute abnormality' if a structural abnormality such as scoliosis is visible. "
+        "Use 'No acute abnormality' only when no focal or structural finding is visible. "
         "Then describe up to six visible observations that a trainee should verify. Keep "
         "every description under 20 words. Uncertainty entries must be short limitations, "
         "not anatomy labels. Do not infer diagnoses from metadata or prior model output. "
@@ -242,6 +244,20 @@ def _localize_target(
     if not isinstance(values, list) or len(values) != 1:
         raise ValueError(f"MedGemma returned an invalid box list for {target}.")
     return _convert_box(_RawBox.model_validate(values[0]), original_size)
+
+
+def _best_prediction(payload: _AssessmentPayload) -> _Prediction:
+    if not _is_generic_normal(payload.prediction.label):
+        return payload.prediction
+    for observation in payload.observations:
+        if not _is_generic_normal(observation.label):
+            return _Prediction(label=observation.label, rationale=observation.description)
+    return payload.prediction
+
+
+def _is_generic_normal(label: str) -> bool:
+    normalized = label.lower()
+    return any(term in normalized for term in ("normal", "no acute", "unremarkable"))
 
 
 def _convert_box(item: _RawBox, original_size: tuple[int, int]) -> RegionBox:

@@ -2,7 +2,14 @@ from __future__ import annotations
 
 import pytest
 
-from radiology_trainer.adapters.medgemma import _RawBox, _convert_box
+from radiology_trainer.adapters.medgemma import (
+    _AssessmentPayload,
+    _Observation,
+    _Prediction,
+    _RawBox,
+    _best_prediction,
+    _convert_box,
+)
 from radiology_trainer.adapters.professor import _structured_review
 from radiology_trainer.structured_output import _extract_json, parse_json_value
 
@@ -18,6 +25,27 @@ def test_extract_json_rejects_plain_text() -> None:
 
 def test_parse_json_value_accepts_fenced_array() -> None:
     assert parse_json_value('```json\n[{"ok": true}]\n```') == [{"ok": True}]
+
+
+def test_medgemma_prediction_prefers_specific_observation() -> None:
+    payload = _AssessmentPayload(
+        prediction=_Prediction(
+            label="No acute abnormality",
+            rationale="No acute finding, but scoliosis is present.",
+        ),
+        observations=[
+            _Observation(
+                label="Scoliosis",
+                description="Right thoracic scoliosis is present.",
+            )
+        ],
+        uncertainty=[],
+    )
+
+    prediction = _best_prediction(payload)
+
+    assert prediction.label == "Scoliosis"
+    assert prediction.rationale == "Right thoracic scoliosis is present."
 
 
 def test_professor_review_repairs_plain_text_response() -> None:
