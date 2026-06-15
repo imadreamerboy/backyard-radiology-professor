@@ -11,6 +11,8 @@ app_port: 7860
 
 An educational chest-radiograph workstation for deliberate practice. A trainee commits a blind interpretation before seeing independently attributed X-Raydar evidence, MedGemma localization, and feedback from a multimodal MedGemma professor.
 
+The app is built for the Hugging Face Build Small hackathon Backyard AI track. It is a teaching demo, not clinical software.
+
 ## Runtime
 
 - `unsloth/medgemma-27b-it-GGUF` Q4_K_M + F16 projector: professor review and multi-turn chat.
@@ -32,13 +34,6 @@ Set `HF_TOKEN` after accepting the MedGemma license. Open [http://localhost:7860
 
 On Windows, run the repository and model cache from the WSL ext4 filesystem
 rather than `/mnt/c`; see [docs/run_wsl.md](docs/run_wsl.md).
-
-For UI-only development:
-
-```bash
-uv sync --extra dicom --extra dev
-uv run python app.py
-```
 
 ## Verify
 
@@ -63,4 +58,4 @@ The public demo is complete only after the same real-backend suite passes agains
 
 CT, MR, non-chest studies, corrupt archives, and oversized uploads are rejected.
 
-This software is for educational practice, not clinical use.
+This software is for educational practice only.

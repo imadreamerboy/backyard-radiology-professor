@@ -51,7 +51,7 @@
     },
     "gpu": {
       "name": "NVIDIA GeForce RTX 4090",
-      "memory_used_mb": 8701,
+      "memory_used_mb": 10056,
       "memory_total_mb": 24564,
       "utilization_percent": 29
     },
@@ -70,7 +70,7 @@
         "quiz": true,
         "model_runs": true
       },
-      "elapsed_ms": 98393,
+      "elapsed_ms": 100005,
       "classifier_scores": {
         "atelectasis": 0.3504062592983246,
         "object": 0.3142843544483185,
@@ -92,7 +92,7 @@
           "runtime": "PyTorch",
           "runtime_revision": "f62b1a1404390bec697c6a6504f9d80193e8f93c",
           "status": "ok",
-          "latency_ms": 30127,
+          "latency_ms": 27141,
           "time_to_first_token_ms": null,
           "tokens_per_second": null,
           "detail": ""
@@ -105,7 +105,7 @@
           "runtime": "llama.cpp",
           "runtime_revision": "b8772-bafae2765",
           "status": "ok",
-          "latency_ms": 3600,
+          "latency_ms": 3124,
           "time_to_first_token_ms": null,
           "tokens_per_second": null,
           "detail": ""
@@ -118,16 +118,16 @@
           "runtime": "llama.cpp",
           "runtime_revision": "b8772-bafae2765",
           "status": "ok",
-          "latency_ms": 33499,
+          "latency_ms": 46359,
           "time_to_first_token_ms": null,
           "tokens_per_second": null,
           "detail": ""
         }
       ],
       "quiz": [
-        "Based on the MedGemma localization findings, what specific area(s) of the radiograph should be re-examined most closely?",
-        "What are the limitations of a standard PA chest radiograph in evaluating the lung bases?",
-        "How does the X-Raydar output inform your interpretation, even when the scores are low?"
+        "What specific structures should be systematically evaluated on a PA chest radiograph?",
+        "How can tools like X-Raydar and MedGemma localization aid in interpreting chest radiographs?",
+        "Why is it important to mention 'important negatives' in a radiology report, even when the overall impression is normal?"
       ]
     },
     {
@@ -142,7 +142,7 @@
         "quiz": true,
         "model_runs": true
       },
-      "elapsed_ms": 62192,
+      "elapsed_ms": 56192,
       "classifier_scores": {
         "scoliosis": 0.9938389658927917,
         "mediastinum displaced": 0.3666714131832123,
@@ -158,8 +158,8 @@
       ],
       "regions": [
         {
-          "id": "3958f171a9614445a64bb2e8ea498145",
-          "image_id": "214ab0df962044d8a4a9aba4d7787e43",
+          "id": "7f4c5f651f0a4645bbd54eb810c2674c",
+          "image_id": "8f08c4be08754fe18c85036216a6f6db",
           "label": "thoracic spine showing scoliosis",
           "x1": 0.23286052009456265,
           "y1": 0.533,
@@ -178,7 +178,7 @@
           "runtime": "PyTorch",
           "runtime_revision": "f62b1a1404390bec697c6a6504f9d80193e8f93c",
           "status": "ok",
-          "latency_ms": 1136,
+          "latency_ms": 845,
           "time_to_first_token_ms": null,
           "tokens_per_second": null,
           "detail": ""
@@ -191,7 +191,7 @@
           "runtime": "llama.cpp",
           "runtime_revision": "b8772-bafae2765",
           "status": "ok",
-          "latency_ms": 7189,
+          "latency_ms": 12445,
           "time_to_first_token_ms": null,
           "tokens_per_second": null,
           "detail": ""
@@ -204,15 +204,15 @@
           "runtime": "llama.cpp",
           "runtime_revision": "b8772-bafae2765",
           "status": "ok",
-          "latency_ms": 22888,
+          "latency_ms": 21570,
           "time_to_first_token_ms": null,
           "tokens_per_second": null,
           "detail": ""
         }
       ],
       "quiz": [
-        "What is the most striking finding on this radiograph?",
-        "How does scoliosis potentially affect the appearance of the mediastinum?",
+        "What is the most significant finding on this radiograph?",
+        "Describe the characteristics of the spinal curvature observed.",
         "What other structures should be routinely assessed on a chest radiograph besides the lungs and heart?"
       ]
     },
@@ -228,7 +228,7 @@
         "quiz": true,
         "model_runs": true
       },
-      "elapsed_ms": 82271,
+      "elapsed_ms": 65602,
       "classifier_scores": {
         "tortuosity aorta": 0.9223618507385254,
         "mediastinum widened": 0.5948531031608582,
@@ -246,8 +246,8 @@
       ],
       "regions": [
         {
-          "id": "3c0c3be72d074dca83aca391947c972e",
-          "image_id": "210840e28bb1498caa9f3f90742b8fb7",
+          "id": "6363dff87e9641babf99389ca798b69a",
+          "image_id": "e29f466ca5ad4b9dac143d7d714262e9",
           "label": "visible aortic contour",
           "x1": 0.333,
           "y1": 0.540283203125,
@@ -257,8 +257,8 @@
           "source": "medgemma-localizer"
         },
         {
-          "id": "1a77811beaa644a188f70dff0c422979",
-          "image_id": "210840e28bb1498caa9f3f90742b8fb7",
+          "id": "b2d22e8df11e47c68691f377cc1cfc9e",
+          "image_id": "e29f466ca5ad4b9dac143d7d714262e9",
           "label": "widened upper mediastinum",
           "x1": 0.263,
           "y1": 0.540283203125,
@@ -268,8 +268,8 @@
           "source": "medgemma-localizer"
         },
         {
-          "id": "8cb7a1f0966a4fa8a16031371564f118",
-          "image_id": "210840e28bb1498caa9f3f90742b8fb7",
+          "id": "d51f00dd31bc436fac93588c8a24c7b4",
+          "image_id": "e29f466ca5ad4b9dac143d7d714262e9",
           "label": "cardiac silhouette",
           "x1": 0.263,
           "y1": 0.540283203125,
@@ -288,7 +288,7 @@
           "runtime": "PyTorch",
           "runtime_revision": "f62b1a1404390bec697c6a6504f9d80193e8f93c",
           "status": "ok",
-          "latency_ms": 1665,
+          "latency_ms": 1063,
           "time_to_first_token_ms": null,
           "tokens_per_second": null,
           "detail": ""
@@ -301,7 +301,7 @@
           "runtime": "llama.cpp",
           "runtime_revision": "b8772-bafae2765",
           "status": "ok",
-          "latency_ms": 11455,
+          "latency_ms": 11111,
           "time_to_first_token_ms": null,
           "tokens_per_second": null,
           "detail": ""
@@ -314,15 +314,15 @@
           "runtime": "llama.cpp",
           "runtime_revision": "b8772-bafae2765",
           "status": "ok",
-          "latency_ms": 29535,
+          "latency_ms": 24835,
           "time_to_first_token_ms": null,
           "tokens_per_second": null,
           "detail": ""
         }
       ],
       "quiz": [
-        "What are the key components contributing to the appearance of a 'widened mediastinum' on a chest radiograph?",
-        "How does an 'unfolded aorta' affect the appearance of the mediastinum and cardiac silhouette?",
+        "What structures contribute to the mediastinal width?",
+        "How does an unfolded aorta affect the appearance of the mediastinum?",
         "What are some potential causes of cardiomegaly?"
       ]
     }

@@ -37,7 +37,6 @@ function bindEvents() {
   $("#help-button").addEventListener("click", openOnboarding);
   $("#close-onboarding").addEventListener("click", closeOnboarding);
   $("#walkthrough-next").addEventListener("click", advanceOnboarding);
-  $("#diagnostics-button").addEventListener("click", openDiagnostics);
   $("#metadata-button").addEventListener("click", openMetadata);
   $$("[data-close-dialog]").forEach((button) => button.addEventListener("click", () => {
     document.getElementById(button.dataset.closeDialog).close();
@@ -90,7 +89,7 @@ async function loadRuntimeStatus() {
     const ready = ["ready", "demo"].includes(state.runtime.runtime_status);
     indicator.className = `runtime-state ${ready ? "ready" : "error"}`;
     indicator.querySelector("span").textContent = ready
-      ? state.runtime.runtime_status === "demo" ? "Demo runtime" : "Models ready"
+      ? state.runtime.runtime_status === "demo" ? "Practice mode" : "Models ready"
       : state.runtime.runtime_status === "loading" ? "Models loading" : "Runtime unavailable";
   } catch {
     $("#runtime-state").className = "runtime-state error";
@@ -569,7 +568,7 @@ function handleAnalysisEvent(event) {
 
 function resetProgress() {
   $$(".progress-row").forEach((row) => row.className = "progress-row");
-  $("#progress-message").textContent = "Waiting for GPU inference slot.";
+  $("#progress-message").textContent = "Waiting for analysis.";
 }
 
 function initializeRegions() {
@@ -784,15 +783,6 @@ function openMetadata() {
   $("#metadata-dialog").showModal();
 }
 
-function openDiagnostics() {
-  $("#diagnostics-content").textContent = JSON.stringify({
-    runtime: state.runtime,
-    session_status: state.session?.status || null,
-    model_runs: state.result ? [...state.result.evidence.model_runs, state.result.tutor.model_run].filter(Boolean) : [],
-  }, null, 2);
-  $("#diagnostics-dialog").showModal();
-}
-
 function openOnboarding() {
   state.onboardingStep = 0;
   renderOnboarding();
@@ -912,7 +902,7 @@ function updateProgress() {
 }
 
 function setBusy(busy, label = "") {
-  $("#runtime-state span").textContent = busy ? label : state.runtime?.runtime_status === "ready" ? "Models ready" : state.runtime?.runtime_status === "demo" ? "Demo runtime" : "Checking runtime";
+  $("#runtime-state span").textContent = busy ? label : state.runtime?.runtime_status === "ready" ? "Models ready" : state.runtime?.runtime_status === "demo" ? "Practice mode" : "Checking runtime";
 }
 
 function showError(message) {

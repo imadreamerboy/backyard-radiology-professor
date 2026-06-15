@@ -26,7 +26,8 @@ PROFESSOR_SYSTEM_PROMPT = """You are Professor MedGemma, an experienced thoracic
 radiologist and demanding but constructive educator. This is educational practice only.
 
 Ground every answer in the supplied radiographs, the trainee's blind interpretation,
-the independently attributed X-Raydar signals, and MedGemma localization evidence.
+the study metadata, the independently attributed X-Raydar signals, and MedGemma
+localization evidence.
 Separate direct observations from interpretation, differential diagnosis, uncertainty,
 and teaching points. Never invent image findings or claim certainty unsupported by the
 evidence. Do not give patient-specific treatment or clinical management instructions.
@@ -60,13 +61,22 @@ class MedGemmaProfessorModel:
         student_read: StudentRead,
         *,
         images: list[Image.Image] | None = None,
+        study_context: dict[str, Any] | None = None,
         reference: ReferenceAnswer | None = None,
     ) -> TutorResponse:
         started = time.perf_counter()
         try:
             content: list[dict[str, Any]] = [
                 {"type": "text", "text": INITIAL_REVIEW_PROMPT},
-                {"type": "text", "text": _context_json(evidence, student_read, reference)},
+                {
+                    "type": "text",
+                    "text": _context_json(
+                        evidence,
+                        student_read,
+                        reference,
+                        study_context=study_context,
+                    ),
+                },
             ]
             for image in (images or [])[:2]:
                 content.append(
@@ -122,11 +132,20 @@ class MedGemmaProfessorModel:
         question: str,
         history: list[ChatMessage],
         images: list[Image.Image],
+        study_context: dict[str, Any] | None,
         reference: ReferenceAnswer | None,
     ) -> Iterator[tuple[str, dict[str, Any]]]:
         context = StudentRead(observation=blind_read, question=question)
         first_content: list[dict[str, Any]] = [
-            {"type": "text", "text": _context_json(evidence, context, reference)}
+            {
+                "type": "text",
+                "text": _context_json(
+                    evidence,
+                    context,
+                    reference,
+                    study_context=study_context,
+                ),
+            }
         ]
         for image in images[:2]:
             first_content.append(
@@ -151,11 +170,14 @@ def _context_json(
     evidence: EvidenceBundle,
     student_read: StudentRead,
     reference: ReferenceAnswer | None,
+    *,
+    study_context: dict[str, Any] | None = None,
 ) -> str:
     return json.dumps(
         {
             "student_blind_read": student_read.observation,
             "student_question": student_read.question,
+            "study": study_context,
             "image_quality": evidence.quality.model_dump(),
             "xraydar_findings": [
                 item.model_dump() for item in evidence.top_findings(8)

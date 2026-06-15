@@ -51,22 +51,22 @@
     },
     "gpu": {
       "name": "NVIDIA GeForce RTX 4090",
-      "memory_used_mb": 22999,
+      "memory_used_mb": 23580,
       "memory_total_mb": 24564,
-      "utilization_percent": 31
+      "utilization_percent": 36
     },
     "detail": ""
   },
   "host_baseline_gpu_memory_mb": 5364,
-  "peak_gpu_memory_mb": 23579,
-  "peak_application_gpu_memory_mb": 18215,
+  "peak_gpu_memory_mb": 23999,
+  "peak_application_gpu_memory_mb": 18635,
   "runs": [
     {
       "index": 0,
       "temperature": "cold",
       "passed": true,
-      "analysis_latency_ms": 41088,
-      "chat_latency_ms": 17175,
+      "analysis_latency_ms": 41806,
+      "chat_latency_ms": 13179,
       "image_sha256": "37cbe3f77ca8d19a7eba72f98306360deceb6f2852b5a51e1b55bf4451c577da",
       "model_runs": [
         {
@@ -77,7 +77,7 @@
           "runtime": "PyTorch",
           "runtime_revision": "f62b1a1404390bec697c6a6504f9d80193e8f93c",
           "status": "ok",
-          "latency_ms": 1835,
+          "latency_ms": 2068,
           "time_to_first_token_ms": null,
           "tokens_per_second": null,
           "detail": ""
@@ -90,7 +90,7 @@
           "runtime": "llama.cpp",
           "runtime_revision": "b8772-bafae2765",
           "status": "ok",
-          "latency_ms": 7022,
+          "latency_ms": 7225,
           "time_to_first_token_ms": null,
           "tokens_per_second": null,
           "detail": ""
@@ -103,7 +103,7 @@
           "runtime": "llama.cpp",
           "runtime_revision": "b8772-bafae2765",
           "status": "ok",
-          "latency_ms": 22836,
+          "latency_ms": 23082,
           "time_to_first_token_ms": null,
           "tokens_per_second": null,
           "detail": ""
@@ -116,9 +116,9 @@
           "runtime": "llama.cpp",
           "runtime_revision": "b8772-bafae2765",
           "status": "ok",
-          "latency_ms": 16592,
-          "time_to_first_token_ms": 2764,
-          "tokens_per_second": 19.467078796368927,
+          "latency_ms": 12440,
+          "time_to_first_token_ms": 3187,
+          "tokens_per_second": 26.20514294945962,
           "detail": ""
         }
       ]
@@ -127,8 +127,8 @@
       "index": 1,
       "temperature": "warm",
       "passed": true,
-      "analysis_latency_ms": 36517,
-      "chat_latency_ms": 13417,
+      "analysis_latency_ms": 43422,
+      "chat_latency_ms": 12661,
       "image_sha256": "37cbe3f77ca8d19a7eba72f98306360deceb6f2852b5a51e1b55bf4451c577da",
       "model_runs": [
         {
@@ -139,7 +139,7 @@
           "runtime": "PyTorch",
           "runtime_revision": "f62b1a1404390bec697c6a6504f9d80193e8f93c",
           "status": "ok",
-          "latency_ms": 871,
+          "latency_ms": 848,
           "time_to_first_token_ms": null,
           "tokens_per_second": null,
           "detail": ""
@@ -152,7 +152,7 @@
           "runtime": "llama.cpp",
           "runtime_revision": "b8772-bafae2765",
           "status": "ok",
-          "latency_ms": 7149,
+          "latency_ms": 7717,
           "time_to_first_token_ms": null,
           "tokens_per_second": null,
           "detail": ""
@@ -165,7 +165,7 @@
           "runtime": "llama.cpp",
           "runtime_revision": "b8772-bafae2765",
           "status": "ok",
-          "latency_ms": 19961,
+          "latency_ms": 24005,
           "time_to_first_token_ms": null,
           "tokens_per_second": null,
           "detail": ""
@@ -178,9 +178,9 @@
           "runtime": "llama.cpp",
           "runtime_revision": "b8772-bafae2765",
           "status": "ok",
-          "latency_ms": 12832,
-          "time_to_first_token_ms": 2352,
-          "tokens_per_second": 21.585421182469883,
+          "latency_ms": 11998,
+          "time_to_first_token_ms": 3144,
+          "tokens_per_second": 24.169435728706024,
           "detail": ""
         }
       ]

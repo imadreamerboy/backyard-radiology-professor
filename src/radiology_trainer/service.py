@@ -147,7 +147,7 @@ class TrainerService:
                 yield {
                     "type": "queue",
                     "position": queue_position,
-                    "message": "GPU inference slot acquired.",
+                    "message": "Analysis started.",
                 }
                 primary_record = record.study.primary()
                 primary = primary_record.render()
@@ -156,7 +156,7 @@ class TrainerService:
                     "type": "stage",
                     "stage": "xraydar",
                     "status": "running",
-                    "message": "Running independent X-Raydar classification.",
+                    "message": "Reviewing independent classifier evidence.",
                 }
                 evidence = evidence_model.analyze(primary)
                 for region in evidence.regions:
@@ -179,7 +179,7 @@ class TrainerService:
                         "type": "stage",
                         "stage": "professor-load",
                         "status": "running",
-                        "message": "Loading MedGemma 27B professor.",
+                        "message": "Preparing professor review.",
                     }
                     self._switch_model(
                         unload=self.config.localizer_model,
@@ -204,6 +204,7 @@ class TrainerService:
                     evidence=evidence,
                     student_read=student_read,
                     images=self._professor_images(record.study),
+                    study_context=self._professor_study_context(record.study),
                     reference=reference,
                 )
                 yield {
@@ -290,6 +291,7 @@ class TrainerService:
                         question=prompt,
                         history=record.public.messages[:-1],
                         images=self._professor_images(record.study),
+                        study_context=self._professor_study_context(record.study),
                         reference=record.study.public.reference,
                     ):
                         if content:
@@ -430,13 +432,14 @@ class TrainerService:
             )
         return self._professor
 
-    def _coach(self, *, evidence, student_read, images, reference):
+    def _coach(self, *, evidence, student_read, images, study_context, reference):
         if self.config.model_mode == "demo":
             return DemoTutorModel().coach(evidence, student_read)
         return self._professor_model().coach(
             evidence,
             student_read,
             images=images,
+            study_context=study_context,
             reference=reference,
         )
 
@@ -445,7 +448,7 @@ class TrainerService:
             "type": "stage",
             "stage": "localizer-load",
             "status": "running",
-            "message": "Loading MedGemma 1.5 4B localizer.",
+            "message": "Preparing image localization.",
         }
         self._switch_model(
             unload=self.config.professor_model,
@@ -502,6 +505,45 @@ class TrainerService:
         if lateral:
             images.append(lateral.render())
         return images
+
+    @staticmethod
+    def _professor_study_context(study: StudyRecord) -> dict[str, Any]:
+        public = study.public
+        return {
+            "title": public.title,
+            "source": public.source,
+            "case_id": public.case_id,
+            "primary_image_id": public.primary_image_id,
+            "image_count": len(public.images),
+            "images": [
+                {
+                    "id": image.id,
+                    "label": image.label,
+                    "projection": image.projection,
+                    "instance_number": image.instance_number,
+                    "width": image.width,
+                    "height": image.height,
+                    "metadata": {
+                        "modality": image.metadata.modality,
+                        "sop_class_uid": image.metadata.sop_class_uid,
+                        "body_part_examined": image.metadata.body_part_examined,
+                        "view_position": image.metadata.view_position,
+                        "laterality": image.metadata.laterality,
+                        "rows": image.metadata.rows,
+                        "columns": image.metadata.columns,
+                        "bits_stored": image.metadata.bits_stored,
+                        "photometric_interpretation": (
+                            image.metadata.photometric_interpretation
+                        ),
+                        "window_center": image.metadata.window_center,
+                        "window_width": image.metadata.window_width,
+                        "pixel_spacing_mm": image.metadata.pixel_spacing_mm,
+                        "frame_number": image.metadata.frame_number,
+                    },
+                }
+                for image in public.images
+            ],
+        }
 
 
 def _image_data_url(image: Image.Image) -> str:

@@ -16,5 +16,3 @@
 - Best Demo.
 - Off-Brand Award for the custom Gradio interface.
 - Local-first and llama.cpp merit badges.
-
-The NVIDIA Nemotron and autonomous-agent tracks are intentionally not targeted.

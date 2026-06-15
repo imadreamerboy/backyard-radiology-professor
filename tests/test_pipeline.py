@@ -7,6 +7,7 @@ from PIL import Image
 
 from radiology_trainer.cases import demo_cases
 from radiology_trainer.config import AppConfig
+from radiology_trainer.adapters.professor import _context_json
 from radiology_trainer.domain import Anatomy, StudentRead
 from radiology_trainer.image_io import load_xray_image
 from radiology_trainer.learning import build_scorecard
@@ -133,3 +134,30 @@ def test_session_api_streams_analysis_and_chat() -> None:
     assert chat.status_code == 200
     assert "event: delta" in chat.text
     assert "event: complete" in chat.text
+
+
+def test_professor_context_includes_study_metadata() -> None:
+    image = Image.new("L", (320, 320), color=110)
+    evidence, _ = build_pipeline(AppConfig()).analyze(
+        image=image,
+        student_read=StudentRead(observation="PA chest. No focal opacity."),
+    )
+    context = _context_json(
+        evidence,
+        StudentRead(observation="PA chest. No focal opacity."),
+        None,
+        study_context={
+            "title": "Derived PA chest",
+            "primary_image_id": "primary",
+            "images": [
+                {
+                    "id": "primary",
+                    "projection": "PA",
+                    "metadata": {"modality": "DX", "pixel_spacing_mm": [0.14, 0.14]},
+                }
+            ],
+        },
+    )
+    assert '"study"' in context
+    assert '"modality": "DX"' in context
+    assert '"xraydar_findings"' in context
