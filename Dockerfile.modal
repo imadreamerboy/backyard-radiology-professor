@@ -22,8 +22,7 @@ COPY --from=llama-runtime /app/llama-server /usr/local/bin/llama-server
 COPY --from=llama-runtime /app/lib*.so* /usr/local/lib/
 RUN ldconfig \
     && curl -sS https://bootstrap.pypa.io/get-pip.py | python \
-    && curl -LsSf https://astral.sh/uv/install.sh | sh
-ENV PATH="/root/.local/bin:${PATH}"
+    && python -m pip install --no-cache-dir uv==0.8.22
 
 WORKDIR /workspace
 COPY pyproject.toml uv.lock README.md ./

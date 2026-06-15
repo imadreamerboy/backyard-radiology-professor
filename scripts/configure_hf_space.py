@@ -58,6 +58,7 @@ def main() -> None:
             ".env",
             ".env.*",
             "artifacts/video/*",
+            "*.bak",
             "*.pyc",
         ],
     )

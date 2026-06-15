@@ -195,6 +195,7 @@ def test_server_proxy_mode_forwards_api(monkeypatch) -> None:
     assert calls[0][1] == "https://modal.example/api/status"
     assert calls[0][2]["headers"]["Modal-Key"] == "wk-test"
     assert calls[0][2]["headers"]["Modal-Secret"] == "ws-test"
+    assert calls[0][2]["headers"]["Accept-Encoding"] == "identity"
 
 
 def test_server_proxy_mode_serves_case_catalog_without_backend(monkeypatch) -> None:

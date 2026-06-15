@@ -13,6 +13,7 @@ def main() -> None:
     args.output_dir.mkdir(parents=True, exist_ok=True)
     raw_dir = args.output_dir / "raw"
     raw_dir.mkdir(exist_ok=True)
+    webm_path = args.output_dir / "backyard-radiology-professor-demo.webm"
 
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=not args.headed)
@@ -46,7 +47,7 @@ def main() -> None:
 
         page.locator('[data-panel="evidence"]').click()
         page.wait_for_timeout(2500)
-        page.locator('[data-panel="professor"]').click()
+        page.locator('[data-panel="chat"]').click()
         page.wait_for_timeout(1800)
         page.locator("#chat-input").fill("Explain the most important teaching point.")
         page.locator("#chat-send").click()
@@ -59,12 +60,11 @@ def main() -> None:
 
         video = page.video
         context.close()
+        if video is None:
+            raise RuntimeError("Playwright did not create a video.")
+        video.save_as(str(webm_path))
         browser.close()
 
-    if video is None:
-        raise RuntimeError("Playwright did not create a video.")
-    webm_path = args.output_dir / "backyard-radiology-professor-demo.webm"
-    video.save_as(str(webm_path))
     _convert_to_mp4(webm_path, args.output_dir)
     print(webm_path)
 

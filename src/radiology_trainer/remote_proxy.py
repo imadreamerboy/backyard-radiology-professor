@@ -9,6 +9,7 @@ from fastapi.responses import Response, StreamingResponse
 
 
 HOP_BY_HOP_HEADERS = {
+    "accept-encoding",
     "connection",
     "content-encoding",
     "content-length",
@@ -92,6 +93,7 @@ def _forward_headers(
     if modal_key and modal_secret:
         forwarded["Modal-Key"] = modal_key
         forwarded["Modal-Secret"] = modal_secret
+    forwarded["Accept-Encoding"] = "identity"
     return forwarded
 
 
